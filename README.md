@@ -42,13 +42,17 @@ flowchart LR
 
 ## Features
 
-- **Batch input** — paste multiple Instagram Reel links at once, one per line
-- **Live progress** — see each reel move through Downloading → Transcribing → Done
+- **Batch input** — paste multiple Instagram Reel links at once, one per line; a submitted batch shows as its own group in the sidebar until you dismiss it, separate from your general history
+- **Dashboard** — a landing view with aggregate stats (reels transcribed, total likes/comments/views) and your most recently transcribed reels, plus a non-blocking "processing in the background" indicator so batch jobs never get lost when you navigate away
+- **Live progress** — see each reel move through Downloading → Transcribing → Done, with state tracked server-side so it survives page reloads
 - **Persistent history sidebar** — every transcribed reel is saved and browsable, with thumbnail, handle, and stats
-- **Engagement metadata** — like count, comment count, view count, and caption pulled alongside the transcript
+- **Engagement metadata** — like count, comment count, and caption pulled alongside the transcript (view count is intentionally left unavailable — see [Why no view count?](#why-no-view-count) below)
+- **Timestamped transcripts** — toggle between plain text and a `[MM:SS]` timestamped script per reel, from Whisper's segment-level output
+- **AI four-part breakdown** *(optional)* — split a transcript into Hook / Promise / Validation / CTA using your own OpenAI- or Anthropic-compatible API key, configured locally in-app and never committed to this repo
+- **Bulk CSV export** — export all transcribed reels to CSV with checkboxes for video link, metrics, timestamped script, and AI analysis
 - **GPU-accelerated** — uses CUDA automatically when available for fast Whisper inference
 - **One-click launch** — a `start.bat` script for Windows users to open the app without touching a terminal
-- **No account, no API key, no cloud dependency**
+- **No account required to transcribe** — the AI breakdown is the only feature that needs an API key, and it's entirely optional
 
 ## Requirements
 
@@ -99,12 +103,30 @@ _whisper_model = whisper.load_model("small", device="cuda")
 
 Swap `"small"` for `"medium"` or `"large-v3"` for higher transcription accuracy (at the cost of more VRAM and slower inference), or `"tiny"`/`"base"` for maximum speed on modest hardware.
 
+### AI breakdown (optional)
+
+Click the ⚙ icon in the sidebar to configure an AI provider for the Hook / Promise / Validation / CTA breakdown:
+
+- **Provider:** OpenAI-compatible or Anthropic-compatible — pick whichever matches your key, or point Base URL at any compatible proxy
+- **Storage:** saved to `data/settings.json`, which is git-ignored — your key never leaves your machine and is never committed to this repo
+
+This step is entirely optional; transcription, the dashboard, and CSV export all work without it.
+
+### Bulk CSV export
+
+The **Export CSV** button in the sidebar lets you choose which columns to include — video CDN link, metrics, timestamped script, and/or AI analysis — and downloads a CSV of every reel you've transcribed. Note that Instagram's CDN video links are signed and expire after a few hours, so treat that column as a snapshot rather than a stable link.
+
+### Why no view count?
+
+Every free path to Instagram Reel view counts — yt-dlp, Instaloader, and even the private-API library `instagrapi` — requires authenticating as a real Instagram account; Instagram doesn't expose that field to anonymous requests. Rather than asking for your Instagram login (and the ban/challenge risk that comes with automating a private API), this tool leaves `view_count` unavailable. Likes, comments, and captions are unaffected.
+
 ## Tech stack
 
 - **Backend:** Python, Flask
 - **Video/metadata extraction:** yt-dlp
 - **Audio processing:** ffmpeg
 - **Speech-to-text:** OpenAI Whisper (PyTorch, CUDA-accelerated)
+- **AI breakdown:** any OpenAI- or Anthropic-compatible chat completions API, via `requests`
 - **Frontend:** vanilla HTML/CSS/JS — no build step, no framework
 
 ## Disclaimer

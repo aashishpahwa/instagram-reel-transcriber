@@ -59,6 +59,54 @@
   }
   .brand { font-size: 1.05rem; font-weight: 700; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
   .brand .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .brand-row { display: flex; align-items: center; justify-content: space-between; }
+  .icon-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 8px;
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 0.95rem;
+    margin-bottom: 14px;
+  }
+  .icon-btn:hover { background: var(--panel-2); color: var(--text); }
+
+  .sidebar-footer { padding: 12px 18px; border-top: 1px solid var(--border); }
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .modal {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    width: 420px; max-width: 90vw; max-height: 85vh; overflow-y: auto;
+    padding: 22px;
+  }
+  .modal h3 { margin: 0 0 16px; font-size: 1rem; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 5px; }
+  .field input, .field select {
+    width: 100%;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    outline: none;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .field-hint { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+  .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 0.85rem; }
+  .checkbox-row input { width: auto; }
+  .modal-note { font-size: 0.74rem; color: var(--muted); background: var(--panel-2); border-radius: 8px; padding: 8px 10px; margin-top: 4px; line-height: 1.4; }
+  .settings-error { font-size: 0.78rem; color: var(--danger); margin-top: 8px; }
   textarea#links {
     width: 100%;
     min-height: 64px;
@@ -90,8 +138,46 @@
   button.primary:hover { opacity: 0.9; }
   button.primary:disabled { opacity: 0.4; cursor: default; }
 
+  .skip-warning {
+    margin-top: 8px;
+    font-size: 0.74rem;
+    color: #d99a3f;
+    background: #d99a3f15;
+    border: 1px solid #d99a3f40;
+    border-radius: 8px;
+    padding: 8px 10px;
+    line-height: 1.4;
+  }
+
+  .progress-banner {
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel-2);
+  }
+  .progress-text { font-size: 0.76rem; color: var(--muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .progress-track { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); transition: width 0.3s ease; }
+
   .history-list { flex: 1; overflow-y: auto; padding: 8px; }
   .history-empty { color: var(--muted); font-size: 0.82rem; text-align: center; padding: 40px 16px; line-height: 1.5; }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px; border-radius: 10px; cursor: pointer;
+    font-size: 0.85rem; font-weight: 600; margin-bottom: 4px;
+  }
+  .nav-item:hover { background: var(--panel-2); }
+  .nav-item.active { background: var(--accent-dim); color: var(--accent); }
+  .nav-item .nav-icon { font-size: 1rem; }
+
+  .batch-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 9px 4px; font-size: 0.72rem; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700;
+  }
+  .batch-header .dismiss { cursor: pointer; font-size: 0.9rem; color: var(--muted); }
+  .batch-header .dismiss:hover { color: var(--text); }
+  .batch-divider { height: 1px; background: var(--border); margin: 6px 4px 10px; }
 
   .hist-item {
     display: flex;
@@ -147,6 +233,39 @@
   .detail-grid { display: grid; grid-template-columns: 340px 1fr; gap: 32px; align-items: start; }
   @media (max-width: 800px) { .detail-grid { grid-template-columns: 1fr; } }
 
+  /* ---------- Dashboard ---------- */
+  .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .dash-header h1 { font-size: 1.4rem; margin: 0; }
+  .dash-header .sub { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+
+  .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+  @media (max-width: 700px) { .stat-cards { grid-template-columns: repeat(2, 1fr); } }
+  .stat-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .stat-card .n { font-size: 1.5rem; font-weight: 700; }
+  .stat-card .l { color: var(--muted); font-size: 0.78rem; margin-top: 2px; }
+
+  .dash-processing {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--accent-dim); border: 1px solid var(--accent); border-radius: var(--radius);
+    padding: 14px 18px; margin-bottom: 28px; font-size: 0.85rem;
+  }
+  .dash-processing .spin-sm { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+
+  .dash-section-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 14px; }
+  .dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
+  .dash-tile {
+    cursor: pointer; border-radius: 10px; overflow: hidden;
+    border: 1px solid var(--border); background: var(--panel);
+  }
+  .dash-tile .dash-thumb { width: 100%; aspect-ratio: 9/16; background: var(--panel-2) center/cover; display: flex; align-items: center; justify-content: center; color: var(--muted); }
+  .dash-tile .dash-info { padding: 8px 10px; }
+  .dash-tile .dash-name { font-size: 0.78rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dash-tile .dash-stats { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+  .dash-tile:hover { border-color: var(--accent); }
+
   .video-wrap video {
     width: 100%;
     border-radius: var(--radius);
@@ -200,7 +319,7 @@
   }
   .error-box { color: var(--danger); background: #ff6b6b15; border: 1px solid #ff6b6b40; border-radius: 10px; padding: 12px 14px; font-size: 0.85rem; }
 
-  .toolbar { display: flex; gap: 8px; margin-top: 14px; }
+  .toolbar { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
   button.ghost {
     background: transparent;
     border: 1px solid var(--border);
@@ -211,20 +330,100 @@
     cursor: pointer;
   }
   button.ghost:hover { background: var(--panel-2); }
+  button.ghost:disabled { opacity: 0.5; cursor: default; }
+  button.ghost.active { border-color: var(--accent); color: var(--accent); }
+
+  .ts-line { display: flex; gap: 10px; margin-bottom: 6px; }
+  .ts-time { color: var(--accent); font-variant-numeric: tabular-nums; font-size: 0.8rem; flex-shrink: 0; padding-top: 2px; }
+
+  .analysis-section { margin-top: 22px; }
+  .analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .analysis-grid { grid-template-columns: 1fr; } }
+  .analysis-card {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .analysis-card .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 6px; }
+  .analysis-card.hook .label { color: #ff8a5b; }
+  .analysis-card.promise .label { color: #ffd15b; }
+  .analysis-card.validation .label { color: #6c8bff; }
+  .analysis-card.cta .label { color: #5bd68a; }
+  .analysis-card .body { font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; }
+  .analysis-card .body.empty { color: var(--muted); font-style: italic; }
 </style>
 </head>
 <body>
   <div class="sidebar">
     <div class="sidebar-header">
-      <div class="brand"><span class="dot"></span>Reel Transcriber</div>
+      <div class="brand-row">
+        <div class="brand"><span class="dot"></span>Reel Transcriber</div>
+        <button class="icon-btn" id="settings-btn" title="AI settings">⚙</button>
+      </div>
       <textarea id="links" placeholder="Paste one or more Instagram reel links, one per line"></textarea>
       <div class="sidebar-actions">
         <span class="hint" id="hint">Cached reels load instantly</span>
         <button class="primary" id="submit-btn">Transcribe</button>
       </div>
+      <div class="skip-warning" id="skip-warning" style="display:none"></div>
+    </div>
+    <div class="progress-banner" id="progress-banner" style="display:none">
+      <div class="progress-text" id="progress-text"></div>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
     </div>
     <div class="history-list" id="history-list">
       <div class="history-empty">No reels yet. Paste a link above to get started.</div>
+    </div>
+    <div class="sidebar-footer">
+      <button class="ghost" id="export-btn" style="width:100%">Export CSV</button>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="settings-modal" style="display:none">
+    <div class="modal">
+      <h3>AI settings</h3>
+      <div class="field">
+        <label>Provider</label>
+        <select id="set-provider">
+          <option value="openai">OpenAI-compatible</option>
+          <option value="anthropic">Anthropic-compatible</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Base URL</label>
+        <input id="set-base-url" placeholder="https://api.openai.com/v1">
+      </div>
+      <div class="field">
+        <label>Model</label>
+        <input id="set-model" placeholder="gpt-4o-mini">
+      </div>
+      <div class="field">
+        <label>API key</label>
+        <input id="set-api-key" type="password" placeholder="">
+        <div class="field-hint" id="key-hint">Stored locally in data/settings.json — never committed, never leaves your machine.</div>
+      </div>
+      <div class="modal-note">Used for the four-part (Hook / Promise / Validation / CTA) breakdown. Point Base URL at any OpenAI- or Anthropic-compatible endpoint, including proxies.</div>
+      <div class="settings-error" id="settings-error" style="display:none"></div>
+      <div class="modal-actions">
+        <button class="ghost" id="settings-cancel">Cancel</button>
+        <button class="primary" id="settings-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="export-modal" style="display:none">
+    <div class="modal">
+      <h3>Export CSV</h3>
+      <div class="checkbox-row"><input type="checkbox" id="exp-link" checked><label for="exp-link">Video CDN link</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="exp-metrics" checked><label for="exp-metrics">Metrics (likes / comments / views)</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="exp-timestamps"><label for="exp-timestamps">Timestamped script</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="exp-analysis"><label for="exp-analysis">AI analysis (Hook / Promise / Validation / CTA)</label></div>
+      <div class="modal-note">Transcript is always included. Only reels you've already transcribed (and, if checked, already AI-analyzed) are exported — this doesn't trigger new AI calls.</div>
+      <div class="modal-actions">
+        <button class="ghost" id="export-cancel">Cancel</button>
+        <button class="primary" id="export-download">Download CSV</button>
+      </div>
     </div>
   </div>
 
@@ -244,9 +443,15 @@ const submitBtn = document.getElementById('submit-btn');
 const historyListEl = document.getElementById('history-list');
 const mainInner = document.getElementById('main-inner');
 
-let history = [];       // done items, newest first
-const jobsById = {};    // id -> latest job (history or in-flight)
-let activeId = null;
+const jobsById = {};    // id -> latest job (done or in-flight)
+let activeId = null;    // null = dashboard
+let polling = false;
+let currentBatch = null; // { ids: [...], ts } — most recent multi-link submission
+let showTimestamps = false;
+const analyzing = new Set();
+let analyzeError = null;
+let analyzeErrorId = null;
+let settingsHasKey = false;
 
 function fmtNum(n) {
   if (n === null || n === undefined) return '—';
@@ -268,8 +473,46 @@ function statusStep(job) {
   return { queued: 0, downloading: 1, transcribing: 2, done: 3, error: -1 }[job.status] ?? 0;
 }
 
+function renderProgress() {
+  const items = Object.values(jobsById);
+  const activeItems = items.filter(j => j.status !== 'done' && j.status !== 'error');
+  const banner = document.getElementById('progress-banner');
+  if (activeItems.length === 0) {
+    banner.style.display = 'none';
+    return;
+  }
+  const done = items.filter(j => j.status === 'done').length;
+  const total = items.length;
+  banner.style.display = 'block';
+  document.getElementById('progress-text').innerHTML = `<span class="spin" style="display:inline-block;vertical-align:-2px;margin-right:6px"></span>Processing ${activeItems.length} · ${done}/${total} done`;
+  document.getElementById('progress-fill').style.width = `${total ? (done / total) * 100 : 0}%`;
+}
+
+function histItemHtml(job) {
+  const thumb = job.thumb_file
+    ? `style="background-image:url('/media/${job.thumb_file}')"`
+    : '';
+  const thumbInner = job.thumb_file ? '' : (job.status === 'done' ? '🎬' : (job.status === 'error' ? '⚠' : '<div class="spin"></div>'));
+  const title = job.meta?.channel ? '@' + job.meta.channel : (job.meta?.uploader || (job.url ? new URL(job.url).pathname.split('/').filter(Boolean).pop() : job.id));
+  const sub = job.status === 'done'
+    ? `❤ ${fmtNum(job.meta?.like_count)} · 💬 ${fmtNum(job.meta?.comment_count)} · ${relTime(job.created_at)}`
+    : (job.status === 'error' ? 'Failed' : job.status[0].toUpperCase() + job.status.slice(1) + '…');
+  return `
+    <div class="hist-item ${job.id === activeId ? 'active' : ''}" onclick="selectItem('${job.id}')">
+      <div class="hist-thumb" ${thumb}>${thumbInner}</div>
+      <div class="hist-meta">
+        <div class="hist-title">${title}</div>
+        <div class="hist-sub ${job.status !== 'done' && job.status !== 'error' ? 'hist-status' : ''}">${sub}</div>
+      </div>
+    </div>`;
+}
+
 function renderSidebar() {
-  const items = Object.values(jobsById).sort((a, b) => {
+  renderProgress();
+
+  const navHtml = `<div class="nav-item ${activeId === null ? 'active' : ''}" onclick="goDashboard()"><span class="nav-icon">🏠</span>Dashboard</div>`;
+
+  let items = Object.values(jobsById).sort((a, b) => {
     const ta = a.created_at || '9999';
     const tb = b.created_at || '9999';
     if (a.status !== 'done' && b.status === 'done') return -1;
@@ -277,32 +520,36 @@ function renderSidebar() {
     return tb.localeCompare(ta);
   });
 
-  if (items.length === 0) {
-    historyListEl.innerHTML = '<div class="history-empty">No reels yet. Paste a link above to get started.</div>';
+  let batchHtml = '';
+  if (currentBatch) {
+    const batchJobs = currentBatch.ids.map(id => jobsById[id]).filter(Boolean);
+    const batchDone = batchJobs.filter(j => j.status === 'done' || j.status === 'error').length;
+    if (batchJobs.length > 0) {
+      batchHtml = `
+        <div class="batch-header">
+          <span>New batch · ${batchJobs.length} reels (${batchDone}/${batchJobs.length})</span>
+          <span class="dismiss" onclick="dismissBatch(event)" title="Dismiss">✕</span>
+        </div>
+        ${batchJobs.map(histItemHtml).join('')}
+        <div class="batch-divider"></div>`;
+      items = items.filter(j => !currentBatch.ids.includes(j.id));
+    }
+  }
+
+  if (items.length === 0 && !batchHtml) {
+    historyListEl.innerHTML = navHtml + '<div class="history-empty">No reels yet. Paste a link above to get started.</div>';
     return;
   }
 
-  historyListEl.innerHTML = items.map(job => {
-    const thumb = job.thumb_file
-      ? `style="background-image:url('/media/${job.thumb_file}')"`
-      : '';
-    const thumbInner = job.thumb_file ? '' : (job.status === 'done' ? '🎬' : (job.status === 'error' ? '⚠' : '<div class="spin"></div>'));
-    const title = job.meta?.channel ? '@' + job.meta.channel : (job.meta?.uploader || (job.url ? new URL(job.url).pathname.split('/').filter(Boolean).pop() : job.id));
-    const sub = job.status === 'done'
-      ? `❤ ${fmtNum(job.meta?.like_count)} · 💬 ${fmtNum(job.meta?.comment_count)} · ${relTime(job.created_at)}`
-      : (job.status === 'error' ? 'Failed' : job.status[0].toUpperCase() + job.status.slice(1) + '…');
-    return `
-      <div class="hist-item ${job.id === activeId ? 'active' : ''}" onclick="selectItem('${job.id}')">
-        <div class="hist-thumb" ${thumb}>${thumbInner}</div>
-        <div class="hist-meta">
-          <div class="hist-title">${title}</div>
-          <div class="hist-sub ${job.status !== 'done' && job.status !== 'error' ? 'hist-status' : ''}">${sub}</div>
-        </div>
-      </div>`;
-  }).join('');
+  historyListEl.innerHTML = navHtml + batchHtml + items.map(histItemHtml).join('');
 }
 
 function renderMain() {
+  if (activeId === null) {
+    renderDashboard();
+    return;
+  }
+
   const job = jobsById[activeId];
   if (!job) {
     mainInner.innerHTML = `
@@ -334,16 +581,23 @@ function renderMain() {
     ${m.description ? `<div class="caption-box">${escapeHtml(m.description)}</div>` : ''}
   ` : '';
 
+  const transcriptBody = showTimestamps && job.segments && job.segments.length > 0
+    ? job.segments.map(seg => `<div class="ts-line"><span class="ts-time">${fmtTime(seg.start)}</span><span>${escapeHtml(seg.text)}</span></div>`).join('')
+    : escapeHtml(job.transcript || '');
+
   const rightCol = job.status === 'error'
     ? `<div class="error-box">${escapeHtml(job.error || 'Something went wrong.')}</div>`
     : job.status === 'done'
       ? `
         <div class="section-label">Transcript</div>
-        <div class="transcript-box">${escapeHtml(job.transcript || '')}</div>
+        <div class="transcript-box">${transcriptBody}</div>
         <div class="toolbar">
           <button class="ghost" onclick="copyTranscript('${job.id}')">Copy transcript</button>
+          <button class="ghost ${showTimestamps ? 'active' : ''}" onclick="toggleTimestamps()">${showTimestamps ? 'Hide timestamps' : 'Timestamped script'}</button>
+          <button class="ghost" id="ai-breakdown-btn" onclick="runAnalysis('${job.id}')" ${analyzing.has(job.id) ? 'disabled' : ''}>${analyzing.has(job.id) ? 'Analyzing…' : (job.analysis ? 'Regenerate AI breakdown' : 'AI breakdown')}</button>
           <button class="ghost" onclick="window.open('${job.url}', '_blank')">Open on Instagram</button>
-        </div>`
+        </div>
+        ${renderAnalysis(job)}`
       : `<div class="section-label">Transcript</div><div class="transcript-box" style="color:var(--muted)">Processing…</div>`;
 
   mainInner.innerHTML = `
@@ -356,6 +610,101 @@ function renderMain() {
         </div>
         ${statsHtml}
         ${rightCol}
+      </div>
+    </div>`;
+}
+
+function renderDashboard() {
+  const all = Object.values(jobsById);
+  const done = all.filter(j => j.status === 'done');
+  const active = all.filter(j => j.status !== 'done' && j.status !== 'error');
+
+  const sum = key => done.reduce((acc, j) => acc + (j.meta?.[key] || 0), 0);
+
+  const statCards = [
+    { n: done.length, l: 'Reels transcribed' },
+    { n: fmtNum(sum('like_count')), l: 'Total likes' },
+    { n: fmtNum(sum('comment_count')), l: 'Total comments' },
+    { n: fmtNum(sum('view_count')), l: 'Total views' },
+  ].map(c => `<div class="stat-card"><div class="n">${c.n}</div><div class="l">${c.l}</div></div>`).join('');
+
+  const processingHtml = active.length > 0 ? `
+    <div class="dash-processing">
+      <div class="spin-sm"></div>
+      <div>Processing ${active.length} reel${active.length === 1 ? '' : 's'} in the background — ${active.map(j => j.status).join(', ')}. Feel free to keep browsing.</div>
+    </div>` : '';
+
+  const recent = [...done].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')).slice(0, 12);
+  const recentHtml = recent.length > 0 ? `
+    <div class="dash-section-title">Recent reels</div>
+    <div class="dash-grid">
+      ${recent.map(j => `
+        <div class="dash-tile" onclick="selectItem('${j.id}')">
+          <div class="dash-thumb" ${j.thumb_file ? `style="background-image:url('/media/${j.thumb_file}')"` : ''}>${j.thumb_file ? '' : '🎬'}</div>
+          <div class="dash-info">
+            <div class="dash-name">${j.meta?.channel ? '@' + j.meta.channel : (j.meta?.uploader || 'Reel')}</div>
+            <div class="dash-stats">❤ ${fmtNum(j.meta?.like_count)} · 💬 ${fmtNum(j.meta?.comment_count)}</div>
+          </div>
+        </div>`).join('')}
+    </div>` : `
+    <div class="empty-state" style="height:auto;padding:60px 0;">
+      <div class="big">🎬</div>
+      <h2>No reels yet</h2>
+      <p>Paste one or more Instagram reel links in the sidebar to get started.</p>
+    </div>`;
+
+  mainInner.innerHTML = `
+    <div class="dash-header">
+      <div>
+        <h1>Dashboard</h1>
+        <div class="sub">Overview of everything you've transcribed</div>
+      </div>
+    </div>
+    <div class="stat-cards">${statCards}</div>
+    ${processingHtml}
+    ${recentHtml}`;
+}
+
+window.goDashboard = function () {
+  activeId = null;
+  renderSidebar();
+  renderMain();
+};
+
+window.dismissBatch = function (event) {
+  event.stopPropagation();
+  currentBatch = null;
+  renderSidebar();
+};
+
+function fmtTime(seconds) {
+  const total = Math.floor(seconds);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const pad = n => String(n).padStart(2, '0');
+  return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
+
+function renderAnalysis(job) {
+  if (analyzeError && analyzeErrorId === job.id) {
+    return `<div class="error-box" style="margin-top:14px">${escapeHtml(analyzeError)}</div>`;
+  }
+  if (!job.analysis) return '';
+  const a = job.analysis;
+  const part = (key, label) => `
+    <div class="analysis-card ${key}">
+      <div class="label">${label}</div>
+      <div class="body ${a[key] ? '' : 'empty'}">${a[key] ? escapeHtml(a[key]) : 'Not present'}</div>
+    </div>`;
+  return `
+    <div class="analysis-section">
+      <div class="section-label">AI Breakdown</div>
+      <div class="analysis-grid">
+        ${part('hook', 'Hook')}
+        ${part('promise', 'Promise')}
+        ${part('validation', 'Validation')}
+        ${part('cta', 'CTA')}
       </div>
     </div>`;
 }
@@ -373,63 +722,181 @@ function copyTranscript(id) {
 
 window.selectItem = function (id) {
   activeId = id;
+  showTimestamps = false;
+  analyzeError = null;
   renderSidebar();
   renderMain();
+};
+
+window.toggleTimestamps = function () {
+  showTimestamps = !showTimestamps;
+  renderMain();
+};
+
+window.runAnalysis = async function (id) {
+  if (analyzing.has(id)) return;
+  analyzeError = null;
+  analyzing.add(id);
+  renderMain();
+  try {
+    const res = await fetch('/api/analyze/' + id, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) {
+      analyzeError = data.error || 'AI breakdown failed.';
+      analyzeErrorId = id;
+      if (/no ai api key/i.test(analyzeError)) openSettings();
+    } else {
+      upsertJob({ id, analysis: data });
+    }
+  } catch (e) {
+    analyzeError = 'AI breakdown failed: ' + e.message;
+    analyzeErrorId = id;
+  } finally {
+    analyzing.delete(id);
+    renderSidebar();
+    renderMain();
+  }
 };
 
 function upsertJob(job) {
   jobsById[job.id] = { ...jobsById[job.id], ...job };
 }
 
-async function loadHistory() {
-  const res = await fetch('/api/history');
-  history = await res.json();
-  history.forEach(upsertJob);
-  renderSidebar();
-  if (!activeId && history.length > 0) {
-    activeId = history[0].id;
-  }
-  renderMain();
+async function refreshJobs() {
+  const res = await fetch('/api/jobs');
+  const items = await res.json();
+  items.forEach(upsertJob);
+  return items;
 }
 
-async function poll(ids) {
-  const active = new Set(ids);
-  while (active.size > 0) {
-    await new Promise(r => setTimeout(r, 1200));
-    const res = await fetch('/api/status?ids=' + Array.from(active).join(','));
-    const items = await res.json();
-    items.forEach(job => {
-      upsertJob(job);
-      if (job.status === 'done' || job.status === 'error') active.delete(job.id);
-    });
-    renderSidebar();
-    renderMain();
+function hasActiveJobs() {
+  return Object.values(jobsById).some(j => j.status !== 'done' && j.status !== 'error');
+}
+
+async function pollLoop() {
+  if (polling) return;
+  polling = true;
+  try {
+    while (hasActiveJobs()) {
+      await new Promise(r => setTimeout(r, 1200));
+      await refreshJobs();
+      renderSidebar();
+      renderMain();
+    }
+  } finally {
+    polling = false;
   }
+}
+
+async function init() {
+  await refreshJobs();
+  renderSidebar();
+  renderMain();
+  if (hasActiveJobs()) pollLoop();
 }
 
 submitBtn.addEventListener('click', async () => {
-  const urls = linksEl.value.split('\n').map(s => s.trim()).filter(Boolean);
-  if (urls.length === 0) return;
+  const lines = linksEl.value.split('\n').map(s => s.trim()).filter(Boolean);
+  if (lines.length === 0) return;
   submitBtn.disabled = true;
+  const skipWarning = document.getElementById('skip-warning');
   try {
     const res = await fetch('/api/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ urls })
+      body: JSON.stringify({ urls: lines })
     });
-    const ids = await res.json();
-    ids.forEach((id, i) => upsertJob({ id, url: urls[i], status: 'queued' }));
-    if (ids.length > 0) activeId = ids[0];
+    const { accepted, skipped } = await res.json();
+
+    if (skipped && skipped.length > 0) {
+      skipWarning.style.display = 'block';
+      skipWarning.textContent = `Skipped ${skipped.length} line(s) that don't look like Instagram reel links: ${skipped.join(', ')}`;
+    } else {
+      skipWarning.style.display = 'none';
+    }
+
+    await refreshJobs();
+    if (accepted.length > 1) {
+      currentBatch = { ids: accepted, ts: Date.now() };
+      activeId = null; // show dashboard so the batch is visible as a group
+    } else if (accepted.length === 1) {
+      activeId = accepted[0];
+    }
     linksEl.value = '';
     renderSidebar();
     renderMain();
-    await poll(ids);
+    pollLoop();
   } finally {
     submitBtn.disabled = false;
   }
 });
 
-loadHistory();
+// ---------- Settings modal ----------
+const settingsModal = document.getElementById('settings-modal');
+const providerDefaults = {
+  openai: 'https://api.openai.com/v1',
+  anthropic: 'https://api.anthropic.com',
+};
+
+function openSettings() {
+  settingsModal.style.display = 'flex';
+  document.getElementById('settings-error').style.display = 'none';
+  loadSettings();
+}
+function closeSettings() { settingsModal.style.display = 'none'; }
+
+async function loadSettings() {
+  const res = await fetch('/api/settings');
+  const s = await res.json();
+  document.getElementById('set-provider').value = s.provider;
+  document.getElementById('set-base-url').value = s.base_url;
+  document.getElementById('set-model').value = s.model;
+  document.getElementById('set-api-key').value = '';
+  settingsHasKey = s.has_key;
+  document.getElementById('set-api-key').placeholder = s.has_key ? 'Saved — leave blank to keep it' : 'sk-...';
+}
+
+document.getElementById('settings-btn').addEventListener('click', openSettings);
+document.getElementById('settings-cancel').addEventListener('click', closeSettings);
+document.getElementById('set-provider').addEventListener('change', (e) => {
+  document.getElementById('set-base-url').value = providerDefaults[e.target.value] || '';
+});
+document.getElementById('settings-save').addEventListener('click', async () => {
+  const body = {
+    provider: document.getElementById('set-provider').value,
+    base_url: document.getElementById('set-base-url').value.trim(),
+    model: document.getElementById('set-model').value.trim(),
+    api_key: document.getElementById('set-api-key').value.trim(),
+  };
+  const errorEl = document.getElementById('settings-error');
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error('Save failed');
+    closeSettings();
+  } catch (e) {
+    errorEl.style.display = 'block';
+    errorEl.textContent = e.message;
+  }
+});
+
+// ---------- Export modal ----------
+const exportModal = document.getElementById('export-modal');
+document.getElementById('export-btn').addEventListener('click', () => { exportModal.style.display = 'flex'; });
+document.getElementById('export-cancel').addEventListener('click', () => { exportModal.style.display = 'none'; });
+document.getElementById('export-download').addEventListener('click', () => {
+  const params = new URLSearchParams({
+    link: document.getElementById('exp-link').checked ? '1' : '0',
+    metrics: document.getElementById('exp-metrics').checked ? '1' : '0',
+    timestamps: document.getElementById('exp-timestamps').checked ? '1' : '0',
+    analysis: document.getElementById('exp-analysis').checked ? '1' : '0',
+  });
+  window.location.href = '/api/export.csv?' + params.toString();
+  exportModal.style.display = 'none';
+});
+
+init();
 </script>
 </body>
 </html>
