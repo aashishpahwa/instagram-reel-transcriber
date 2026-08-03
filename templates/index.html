@@ -419,7 +419,8 @@
       <div class="checkbox-row"><input type="checkbox" id="exp-metrics" checked><label for="exp-metrics">Metrics (likes / comments / views)</label></div>
       <div class="checkbox-row"><input type="checkbox" id="exp-timestamps"><label for="exp-timestamps">Timestamped script</label></div>
       <div class="checkbox-row"><input type="checkbox" id="exp-analysis"><label for="exp-analysis">AI analysis (Hook / Promise / Validation / CTA)</label></div>
-      <div class="modal-note">Transcript is always included. Only reels you've already transcribed (and, if checked, already AI-analyzed) are exported — this doesn't trigger new AI calls.</div>
+      <div class="modal-note">Transcript is always included. Only fully-transcribed reels are exported. If a checked field (timestamps / AI analysis) is missing for a reel, it's generated automatically before the export runs.</div>
+      <div class="settings-error" id="export-status" style="display:none"></div>
       <div class="modal-actions">
         <button class="ghost" id="export-cancel">Cancel</button>
         <button class="primary" id="export-download">Download CSV</button>
@@ -885,15 +886,65 @@ document.getElementById('settings-save').addEventListener('click', async () => {
 const exportModal = document.getElementById('export-modal');
 document.getElementById('export-btn').addEventListener('click', () => { exportModal.style.display = 'flex'; });
 document.getElementById('export-cancel').addEventListener('click', () => { exportModal.style.display = 'none'; });
-document.getElementById('export-download').addEventListener('click', () => {
-  const params = new URLSearchParams({
-    link: document.getElementById('exp-link').checked ? '1' : '0',
-    metrics: document.getElementById('exp-metrics').checked ? '1' : '0',
-    timestamps: document.getElementById('exp-timestamps').checked ? '1' : '0',
-    analysis: document.getElementById('exp-analysis').checked ? '1' : '0',
-  });
-  window.location.href = '/api/export.csv?' + params.toString();
-  exportModal.style.display = 'none';
+document.getElementById('export-download').addEventListener('click', async () => {
+  const opts = {
+    link: document.getElementById('exp-link').checked,
+    metrics: document.getElementById('exp-metrics').checked,
+    timestamps: document.getElementById('exp-timestamps').checked,
+    analysis: document.getElementById('exp-analysis').checked,
+  };
+  const downloadBtn = document.getElementById('export-download');
+  const statusEl = document.getElementById('export-status');
+  downloadBtn.disabled = true;
+  statusEl.style.display = 'none';
+
+  try {
+    const prepRes = await fetch('/api/export/prepare', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ timestamps: opts.timestamps, analysis: opts.analysis, link: opts.link }),
+    });
+    const prep = await prepRes.json();
+
+    if (prep.needs_key) {
+      statusEl.style.display = 'block';
+      statusEl.style.color = 'var(--danger)';
+      statusEl.textContent = 'AI analysis is checked but no API key is configured — add one in Settings, or uncheck AI analysis.';
+      return;
+    }
+
+    let remaining = new Set(prep.pending_ids || []);
+    const parts = [opts.link ? 'video links' : null, opts.timestamps ? 'timestamps' : null, opts.analysis ? 'AI breakdown' : null].filter(Boolean).join(' & ');
+    let attempts = 0;
+    while (remaining.size > 0 && attempts < 200) {
+      statusEl.style.display = 'block';
+      statusEl.style.color = 'var(--muted)';
+      statusEl.textContent = `Generating ${parts} for ${remaining.size} reel(s) before exporting…`;
+      await new Promise(r => setTimeout(r, 1500));
+      const items = await refreshJobs();
+      items.forEach(j => {
+        if (!remaining.has(j.id)) return;
+        const linkReady = !opts.link || (j.meta && j.meta.cdn_url);
+        const tsReady = !opts.timestamps || (j.segments && j.segments.length > 0);
+        const analysisReady = !opts.analysis || j.analysis;
+        if (linkReady && tsReady && analysisReady) remaining.delete(j.id);
+      });
+      attempts++;
+    }
+    statusEl.style.display = 'none';
+    renderSidebar();
+    renderMain();
+
+    const params = new URLSearchParams({
+      link: opts.link ? '1' : '0',
+      metrics: opts.metrics ? '1' : '0',
+      timestamps: opts.timestamps ? '1' : '0',
+      analysis: opts.analysis ? '1' : '0',
+    });
+    window.location.href = '/api/export.csv?' + params.toString();
+    exportModal.style.display = 'none';
+  } finally {
+    downloadBtn.disabled = false;
+  }
 });
 
 init();

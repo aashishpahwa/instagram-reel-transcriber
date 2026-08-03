@@ -70,6 +70,8 @@ jobs = {}  # id -> job dict; the live, authoritative state for this server proce
 
 download_queue = queue.Queue()
 transcribe_queue = queue.Queue()
+analysis_queue = queue.Queue()
+link_queue = queue.Queue()
 
 _whisper_model = None
 _whisper_lock = threading.Lock()
@@ -189,7 +191,7 @@ def downloader_worker():
                 pass
 
             update_job(rid, status="transcribing", meta=meta, thumb_file=thumb_file, video_file=video_path.name)
-            transcribe_queue.put((rid, video_path))
+            transcribe_queue.put(("new", rid, video_path))
 
         except Exception as exc:
             update_job(rid, status="error", error=str(exc))
@@ -199,7 +201,7 @@ def downloader_worker():
 
 def transcriber_worker():
     while True:
-        rid, video_path = transcribe_queue.get()
+        kind, rid, video_path = transcribe_queue.get()
         try:
             model = get_whisper_model()
             result = model.transcribe(str(video_path))
@@ -207,23 +209,87 @@ def transcriber_worker():
             segments = [{"start": seg["start"], "end": seg["end"], "text": seg["text"].strip()}
                         for seg in result.get("segments", [])]
 
-            update_job(rid, status="done", transcript=transcript, segments=segments,
-                       created_at=datetime.now(timezone.utc).isoformat())
+            if kind == "new":
+                update_job(rid, status="done", transcript=transcript, segments=segments,
+                           created_at=datetime.now(timezone.utc).isoformat())
+            else:  # backfill: reel is already done, just fill in segments
+                update_job(rid, segments=segments)
 
+            with jobs_lock:
+                job_snapshot = dict(jobs[rid])
             with store_lock:
                 store = load_store()
-                store[rid] = jobs[rid]
+                store[rid] = job_snapshot
                 save_store(store)
 
         except Exception as exc:
-            update_job(rid, status="error", error=str(exc))
+            print(f"[transcriber_worker] {kind} failed for {rid}: {exc}", file=sys.stderr)
+            if kind == "new":
+                update_job(rid, status="error", error=str(exc))
         finally:
             transcribe_queue.task_done()
+
+
+def analysis_worker():
+    while True:
+        rid = analysis_queue.get()
+        try:
+            settings = load_settings()
+            with jobs_lock:
+                job = jobs.get(rid)
+            if job and job.get("transcript") and settings.get("api_key") and not job.get("analysis"):
+                if settings["provider"] == "anthropic":
+                    analysis = call_anthropic(settings, job["transcript"])
+                else:
+                    analysis = call_openai(settings, job["transcript"])
+                update_job(rid, analysis=analysis)
+                with jobs_lock:
+                    job_snapshot = dict(jobs[rid])
+                with store_lock:
+                    store = load_store()
+                    store[rid] = job_snapshot
+                    save_store(store)
+        except Exception as exc:
+            print(f"[analysis_worker] failed for {rid}: {exc}", file=sys.stderr)
+        finally:
+            analysis_queue.task_done()
+
+
+def link_worker():
+    while True:
+        rid = link_queue.get()
+        try:
+            with jobs_lock:
+                job = jobs.get(rid)
+            if job and job.get("url"):
+                import yt_dlp
+                ydl_opts = {"format": "mp4/best", "quiet": True, "no_warnings": True}
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(job["url"], download=False)
+                cdn_url = info.get("url")
+                if cdn_url:
+                    meta = dict(job.get("meta") or {})
+                    meta["cdn_url"] = cdn_url
+                    update_job(rid, meta=meta)
+                    with jobs_lock:
+                        job_snapshot = dict(jobs[rid])
+                    with store_lock:
+                        store = load_store()
+                        store[rid] = job_snapshot
+                        save_store(store)
+        except Exception as exc:
+            print(f"[link_worker] failed for {rid}: {exc}", file=sys.stderr)
+        finally:
+            link_queue.task_done()
 
 
 for _ in range(DOWNLOAD_WORKERS):
     threading.Thread(target=downloader_worker, daemon=True).start()
 threading.Thread(target=transcriber_worker, daemon=True).start()
+for _ in range(2):
+    threading.Thread(target=analysis_worker, daemon=True).start()
+for _ in range(3):
+    threading.Thread(target=link_worker, daemon=True).start()
 
 
 @app.route("/")
@@ -345,6 +411,54 @@ def analyze(rid):
         save_store(store)
 
     return jsonify(analysis)
+
+
+@app.route("/api/export/prepare", methods=["POST"])
+def export_prepare():
+    data = request.get_json(force=True)
+    need_timestamps = bool(data.get("timestamps"))
+    need_analysis = bool(data.get("analysis"))
+    need_link = bool(data.get("link"))
+
+    settings = load_settings()
+    has_key = bool(settings.get("api_key"))
+
+    store = load_store()
+    with jobs_lock:
+        merged = dict(store)
+        merged.update(jobs)
+        done_jobs = [j for j in merged.values() if j.get("status") == "done"]
+
+    pending = set()
+    for j in done_jobs:
+        rid = j["id"]
+        needs_ts = need_timestamps and not j.get("segments") and j.get("video_file")
+        needs_analysis = need_analysis and has_key and not j.get("analysis") and j.get("transcript")
+        needs_link = need_link and not (j.get("meta") or {}).get("cdn_url") and j.get("url")
+        if not (needs_ts or needs_analysis or needs_link):
+            continue
+
+        with jobs_lock:
+            if rid not in jobs:
+                jobs[rid] = j
+
+        if needs_link:
+            link_queue.put(rid)
+            pending.add(rid)
+
+        if needs_ts:
+            video_path = VIDEOS_DIR / j["video_file"]
+            if video_path.exists():
+                transcribe_queue.put(("backfill", rid, video_path))
+                pending.add(rid)
+        if needs_analysis:
+            analysis_queue.put(rid)
+            pending.add(rid)
+
+    return jsonify({
+        "pending_ids": sorted(pending),
+        "needs_key": need_analysis and not has_key,
+    })
 
 
 @app.route("/api/export.csv")
