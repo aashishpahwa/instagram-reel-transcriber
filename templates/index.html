@@ -352,6 +352,42 @@
   .analysis-card.cta .label { color: #5bd68a; }
   .analysis-card .body { font-size: 0.85rem; line-height: 1.5; white-space: pre-wrap; }
   .analysis-card .body.empty { color: var(--muted); font-style: italic; }
+
+  /* ---------- Bulk Analysis ---------- */
+  .bulk-actions { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .bulk-generated { font-size: 0.76rem; color: var(--muted); }
+  .bulk-empty { color: var(--muted); font-size: 0.88rem; line-height: 1.6; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .bulk-section-title { font-size: 0.95rem; font-weight: 700; margin: 24px 0 14px; }
+  .bulk-section-title:first-of-type { margin-top: 0; }
+  .bulk-summary { font-size: 0.9rem; line-height: 1.6; margin-bottom: 10px; }
+  .bulk-caveats { font-size: 0.76rem; color: var(--muted); background: var(--panel-2); border-radius: 8px; padding: 8px 10px; margin-bottom: 24px; line-height: 1.4; }
+  .bulk-formula-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 700px) { .bulk-formula-grid { grid-template-columns: 1fr; } }
+  .bulk-formula-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; border-left: 3px solid var(--border); }
+  .bulk-formula-card.working { border-left-color: #5bd68a; }
+  .bulk-formula-card.not-working { border-left-color: var(--danger); }
+  .bulk-formula-card .cat { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 700; }
+  .bulk-formula-card .name { font-size: 0.92rem; font-weight: 700; margin: 3px 0 6px; }
+  .bulk-formula-card .desc { font-size: 0.82rem; line-height: 1.5; }
+  .bulk-formula-card .evidence { font-size: 0.72rem; color: var(--muted); margin-top: 8px; }
+  .bulk-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); margin-top: 8px; }
+  .bulk-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; white-space: nowrap; }
+  .bulk-table th, .bulk-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+  .bulk-table th { color: var(--muted); font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .bulk-table tr:last-child td { border-bottom: none; }
+  .bulk-table td.reel-cell { display: flex; align-items: center; gap: 8px; }
+  .bulk-table .reel-thumb { width: 24px; height: 24px; border-radius: 4px; background: var(--panel-2) center/cover; flex-shrink: 0; }
+  .bulk-tier { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; }
+  .bulk-tier.high { background: #5bd68a22; color: #5bd68a; }
+  .bulk-tier.low { background: #ff6b6b22; color: var(--danger); }
+  .bulk-tier.mid { background: var(--panel-2); color: var(--muted); }
+  .analysis-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .analysis-tab { padding: 8px 14px; font-size: 0.85rem; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .analysis-tab:hover { color: var(--text); }
+  .analysis-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .formula-rating { color: #ffd15b; font-size: 0.78rem; margin-left: 6px; letter-spacing: 1px; }
+  .evidence-chip { display: inline-block; background: var(--panel-2); border-radius: 6px; padding: 1px 6px; margin: 0 2px; cursor: pointer; color: var(--accent); }
+  .evidence-chip:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -453,6 +489,13 @@ const analyzing = new Set();
 let analyzeError = null;
 let analyzeErrorId = null;
 let settingsHasKey = false;
+let analysisCategories = [];
+let analysisTab = 'overview';
+let analysisOverview = null;
+let analysisFormulas = {};
+let analysisRunning = false;
+let analysisStatus = null;
+let analysisError = null;
 
 function fmtNum(n) {
   if (n === null || n === undefined) return '—';
@@ -511,7 +554,9 @@ function histItemHtml(job) {
 function renderSidebar() {
   renderProgress();
 
-  const navHtml = `<div class="nav-item ${activeId === null ? 'active' : ''}" onclick="goDashboard()"><span class="nav-icon">🏠</span>Dashboard</div>`;
+  const navHtml = `
+    <div class="nav-item ${activeId === null ? 'active' : ''}" onclick="goDashboard()"><span class="nav-icon">🏠</span>Dashboard</div>
+    <div class="nav-item ${activeId === 'analysis' ? 'active' : ''}" onclick="goAnalysis()"><span class="nav-icon">📊</span>Analysis</div>`;
 
   let items = Object.values(jobsById).sort((a, b) => {
     const ta = a.created_at || '9999';
@@ -548,6 +593,10 @@ function renderSidebar() {
 function renderMain() {
   if (activeId === null) {
     renderDashboard();
+    return;
+  }
+  if (activeId === 'analysis') {
+    renderAnalysisPage();
     return;
   }
 
@@ -670,6 +719,195 @@ window.goDashboard = function () {
   activeId = null;
   renderSidebar();
   renderMain();
+};
+
+window.goAnalysis = function () {
+  activeId = 'analysis';
+  renderSidebar();
+  renderMain();
+  loadAnalysisData();
+};
+
+async function loadAnalysisData() {
+  try {
+    if (analysisCategories.length === 0) {
+      analysisCategories = await fetch('/api/analysis/categories').then(r => r.json());
+    }
+    const [overview, allFormulas] = await Promise.all([
+      fetch('/api/analysis/overview').then(r => r.json()),
+      fetch('/api/analysis/formulas').then(r => r.json()),
+    ]);
+    analysisOverview = overview;
+    analysisFormulas = {};
+    allFormulas.forEach(f => {
+      (analysisFormulas[f.category] = analysisFormulas[f.category] || []).push(f);
+    });
+  } catch (e) {
+    // leave existing state as-is - page still shows whatever it already had
+  }
+  if (activeId === 'analysis') renderMain();
+}
+
+window.setAnalysisTab = function (slug) {
+  analysisTab = slug;
+  renderMain();
+};
+
+function formulaStars(rating) {
+  if (!rating) return '';
+  const n = Math.max(0, Math.min(5, rating));
+  return `<span class="formula-rating">${'★'.repeat(n)}${'☆'.repeat(5 - n)}</span>`;
+}
+
+function renderAnalysisPage() {
+  const doneJobs = Object.values(jobsById).filter(j => j.status === 'done');
+  const analyzedCount = doneJobs.filter(j => j.analysis).length;
+  const canGenerate = analyzedCount >= 6;
+
+  const header = `
+    <div class="dash-header">
+      <div>
+        <h1>Analysis</h1>
+        <div class="sub">AI-generated hook, script, and talking-style formulas that correlate with engagement across everything you've transcribed</div>
+      </div>
+    </div>`;
+
+  const tabs = [{ slug: 'overview', display_name: 'Overview' }, ...analysisCategories];
+  const tabsHtml = `
+    <div class="analysis-tabs">
+      ${tabs.map(t => `<div class="analysis-tab ${analysisTab === t.slug ? 'active' : ''}" onclick="setAnalysisTab('${t.slug}')">${escapeHtml(t.display_name)}</div>`).join('')}
+    </div>`;
+
+  const run = analysisOverview && analysisOverview.run;
+  const actions = canGenerate ? `
+    <div class="bulk-actions">
+      <button class="ghost" id="analysis-run-btn" onclick="runAnalysisGenerate()" ${analysisRunning ? 'disabled' : ''}>${analysisRunning ? (analysisStatus || 'Running…') : (run ? 'Regenerate' : 'Generate formulas')}</button>
+      ${run ? `<span class="bulk-generated">Generated ${relTime(run.generated_at)} · ${run.high_count} high + ${run.low_count} low engagement reels compared (${run.mid_count} excluded from the comparison)</span>` : ''}
+    </div>` : `
+    <div class="bulk-actions">
+      <span class="bulk-generated">Need at least 6 AI-analyzed reels to generate formulas — you have ${analyzedCount}.</span>
+    </div>`;
+
+  const errorHtml = analysisError ? `<div class="error-box" style="margin-bottom:20px">${escapeHtml(analysisError)}</div>` : '';
+
+  const body = analysisTab === 'overview' ? renderAnalysisOverviewTab() : renderAnalysisFormulasTab(analysisTab);
+
+  mainInner.innerHTML = header + tabsHtml + actions + errorHtml + body;
+}
+
+function renderAnalysisOverviewTab() {
+  if (!analysisOverview) return `<div class="bulk-empty">Loading…</div>`;
+  const run = analysisOverview.run;
+  const table = analysisOverview.table || [];
+
+  const summaryHtml = run && run.summary ? `<div class="bulk-summary">${escapeHtml(run.summary)}</div>` : '';
+  const caveatsHtml = run && run.caveats ? `<div class="bulk-caveats">⚠ ${escapeHtml(run.caveats)}</div>` : '';
+  const emptyHtml = !run ? `<div class="bulk-empty">Not generated yet. Click "Generate formulas" above to have AI compare your highest- and lowest-engagement reels.</div>` : '';
+
+  if (table.length === 0) {
+    return summaryHtml + caveatsHtml + emptyHtml;
+  }
+
+  const tableRows = table.map(row => `
+    <tr>
+      <td class="reel-cell">
+        <div class="reel-thumb" ${row.thumb_file ? `style="background-image:url('/media/${row.thumb_file}')"` : ''}></div>
+        ${escapeHtml(row.title || row.id)}
+      </td>
+      <td><span class="bulk-tier ${row.tier}">${row.tier}</span></td>
+      <td>${fmtNum(row.like_count)}</td>
+      <td>${fmtNum(row.comment_count)}</td>
+      <td>${row.wpm ?? '—'}</td>
+      <td>${row.duration_sec != null ? Math.round(row.duration_sec) + 's' : '—'}</td>
+      <td>${row.question_count ?? '—'}</td>
+      <td>${row.filler_per_1k ?? '—'}</td>
+    </tr>`).join('');
+
+  const tableHtml = `
+    <div class="bulk-section-title">Reels in this batch</div>
+    <div class="bulk-table-wrap">
+      <table class="bulk-table">
+        <thead><tr><th>Reel</th><th>Tier</th><th>Likes</th><th>Comments</th><th>WPM</th><th>Duration</th><th>Questions</th><th>Filler/1k</th></tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>`;
+
+  return summaryHtml + caveatsHtml + emptyHtml + tableHtml;
+}
+
+function renderAnalysisFormulasTab(slug) {
+  const formulas = analysisFormulas[slug] || [];
+  if (formulas.length === 0) {
+    return `<div class="bulk-empty">No formulas yet for this category. Click "Generate formulas" above once you have enough analyzed reels.</div>`;
+  }
+
+  const fCard = (f) => `
+    <div class="bulk-formula-card ${f.status === 'working' ? 'working' : 'not-working'}">
+      <div class="name">${escapeHtml(f.name)}${formulaStars(f.rating)}</div>
+      <div class="desc">${escapeHtml(f.description || '')}</div>
+      ${f.reason ? `<div class="desc" style="color:var(--muted);margin-top:6px">${escapeHtml(f.reason)}</div>` : ''}
+      <div class="evidence">
+        ${f.times_seen > 1 ? `Confirmed across ${f.times_seen} runs · ` : ''}${(f.evidence_reel_ids || []).length ? `Seen in: ${f.evidence_reel_ids.map(id => `<span class="evidence-chip" onclick="selectItem('${id}')">${escapeHtml(id)}</span>`).join(' ')}` : ''}
+      </div>
+    </div>`;
+
+  const working = formulas.filter(f => f.status === 'working');
+  const notWorking = formulas.filter(f => f.status !== 'working');
+
+  const workingHtml = working.length ? `
+    <div class="bulk-section-title">✅ What's working</div>
+    <div class="bulk-formula-grid">${working.map(fCard).join('')}</div>` : '';
+
+  const notWorkingHtml = notWorking.length ? `
+    <div class="bulk-section-title">❌ What's not working</div>
+    <div class="bulk-formula-grid">${notWorking.map(fCard).join('')}</div>` : '';
+
+  return workingHtml + notWorkingHtml;
+}
+
+window.runAnalysisGenerate = async function () {
+  if (analysisRunning) return;
+  analysisRunning = true;
+  analysisError = null;
+  analysisStatus = 'Checking reels…';
+  renderMain();
+  try {
+    const prepRes = await fetch('/api/analysis/prepare', { method: 'POST' });
+    const prep = await prepRes.json();
+    if (prep.needs_key) {
+      analysisError = 'No AI API key configured. Add one in Settings.';
+      openSettings();
+      return;
+    }
+
+    let remaining = new Set(prep.pending_ids || []);
+    let attempts = 0;
+    while (remaining.size > 0 && attempts < 200) {
+      analysisStatus = `Running AI breakdown on ${remaining.size} reel(s) first…`;
+      renderMain();
+      await new Promise(r => setTimeout(r, 1500));
+      const items = await refreshJobs();
+      items.forEach(j => { if (j.analysis) remaining.delete(j.id); });
+      attempts++;
+    }
+
+    analysisStatus = 'Generating formulas…';
+    renderMain();
+    const runRes = await fetch('/api/analysis/generate', { method: 'POST' });
+    const data = await runRes.json();
+    if (!runRes.ok) {
+      analysisError = data.error || 'Formula generation failed.';
+    } else {
+      await loadAnalysisData();
+    }
+  } catch (e) {
+    analysisError = 'Formula generation failed: ' + e.message;
+  } finally {
+    analysisRunning = false;
+    analysisStatus = null;
+    renderSidebar();
+    renderMain();
+  }
 };
 
 window.dismissBatch = function (event) {

@@ -1,3 +1,4 @@
+import collections
 import csv
 import glob
 import hashlib
@@ -10,17 +11,25 @@ import shutil
 import subprocess
 import sys
 import threading
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
+import psycopg2
+import psycopg2.extras
+import psycopg2.pool
 import requests
+from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, request, send_from_directory
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
 VIDEOS_DIR = DATA_DIR / "videos"
-STORE_PATH = DATA_DIR / "store.json"
-SETTINGS_PATH = DATA_DIR / "settings.json"
+DATABASE_URL = os.environ["DATABASE_URL"]
+
+MIN_BULK_REELS = 6
 
 DOWNLOAD_WORKERS = 3
 INSTAGRAM_URL_RE = re.compile(r"instagram\.com/(?:reel|reels|p)/[A-Za-z0-9_-]+", re.IGNORECASE)
@@ -37,6 +46,27 @@ ANALYSIS_PROMPT = """You are analyzing the transcript of a short-form video (an 
 Use the transcript's own wording for each part verbatim - don't summarize, paraphrase, or add commentary. Every part of the transcript should be accounted for across the four fields, in order, with no overlap.
 
 Transcript:
+"""
+
+FORMULA_ANALYSIS_PROMPT_TEMPLATE = """You are maintaining a persistent library of reusable content formulas extracted from a batch of short-form video (Instagram Reel) transcripts that have each already been split into four parts: hook, promise, validation, cta. Each reel also comes with engagement data (likes, comments) and computed delivery metrics (words per minute, sentence length, filler-word density, direct-address density, question count, number/stat mentions, hook length, and how far into the video the CTA lands).
+
+Reels are grouped into two engagement tiers based on a likes+comments composite score: "high" (top third of this batch) and "low" (bottom third). This score is a proxy only - Instagram view counts aren't available, so a low score can also just mean low reach rather than a bad reel. Say so explicitly in your caveats.
+
+Your job: find recurring formulas - reusable patterns in how the hook opens, how the script is structured (e.g. problem-agitate-solve, listicle, myth-bust, before/after, personal story), and how the creator talks (pacing, directness, energy) - phrased like "this person did X" reusable templates, not one-off observations. Only use these category slugs: {categories}.
+
+You are extending an EXISTING library, not starting fresh. Existing formulas already recorded (id, category, name, description):
+{existing_formulas}
+
+For each pattern you find in this batch: if it represents the SAME underlying idea as one already listed above (even if worded differently), reuse that formula_id and return updated rating/reason/evidence rather than creating a near-duplicate - bias toward merging. Only propose a new formula (formula_id omitted) if it's genuinely distinct from everything listed above. Never invent a formula_id that isn't in the list above.
+
+Respond with ONLY a strict JSON object with these exact keys:
+- matched: array of {{"formula_id": <int from the list above>, "category": one of {categories}, "rating": 1-5, "status": "working"|"not_working", "reason": why, updated for this run, "evidence_reel_ids": [ids from this batch]}}
+- new: array of {{"category": one of {categories}, "name": short reusable label, "description": the reusable pattern itself, "reason": why it likely works or doesn't, "rating": 1-5, "status": "working"|"not_working", "evidence_reel_ids": [ids from this batch]}}
+- summary: 2-4 sentence plain-English takeaway for this run
+- caveats: 1-3 sentences on the limits of this analysis (proxy metric, sample size, anything else relevant)
+
+Batch data for this run (JSON):
+{batch}
 """
 
 
@@ -64,7 +94,6 @@ ensure_ffmpeg_on_path()
 VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__)
-store_lock = threading.Lock()
 jobs_lock = threading.Lock()
 jobs = {}  # id -> job dict; the live, authoritative state for this server process
 
@@ -86,24 +115,145 @@ def get_whisper_model():
     return _whisper_model
 
 
+# ---------- Database ----------
+# jsonb columns come back as native dicts/lists without manual json.loads.
+psycopg2.extras.register_default_jsonb(globally=True)
+psycopg2.extras.register_default_json(globally=True)
+
+db_pool = psycopg2.pool.ThreadedConnectionPool(minconn=1, maxconn=15, dsn=DATABASE_URL)
+
+REEL_COLUMNS = ["id", "url", "status", "transcript", "segments", "video_file", "thumb_file",
+                "created_at", "meta", "analysis", "error"]
+
+
+def _get_live_conn():
+    """Neon can suspend-and-drop idle connections; a pooled connection can go
+    stale between requests. Probe before handing it out rather than discovering
+    that mid-transaction."""
+    while True:
+        conn = db_pool.getconn()
+        try:
+            with conn.cursor() as probe:
+                probe.execute("SELECT 1")
+            return conn
+        except (psycopg2.OperationalError, psycopg2.InterfaceError):
+            db_pool.putconn(conn, close=True)
+
+
+@contextmanager
+def db_cursor():
+    conn = _get_live_conn()
+    close_conn = False
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        try:
+            yield cur
+            conn.commit()
+        except (psycopg2.OperationalError, psycopg2.InterfaceError):
+            close_conn = True
+            raise
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            cur.close()
+    finally:
+        db_pool.putconn(conn, close=close_conn)
+
+
+# In-memory mirrors of the `reels`/`settings` tables, so the frequently-polled
+# /api/jobs route (every 1.2s while anything is active) never hits the DB directly.
+store_cache = {}
+store_cache_lock = threading.Lock()
+settings_cache = {}
+settings_cache_lock = threading.Lock()
+
+_reel_locks = collections.defaultdict(threading.Lock)
+_reel_locks_guard = threading.Lock()
+
+
+def _lock_for(rid):
+    with _reel_locks_guard:
+        return _reel_locks[rid]
+
+
 def load_store():
-    if STORE_PATH.exists():
-        return json.loads(STORE_PATH.read_text(encoding="utf-8"))
-    return {}
+    """DB read of every reel - only ever called once, at startup, to seed store_cache."""
+    with db_cursor() as cur:
+        cur.execute(f"SELECT {', '.join(REEL_COLUMNS)} FROM reels")
+        result = {}
+        for row in cur.fetchall():
+            d = dict(row)
+            if d.get("created_at"):
+                d["created_at"] = d["created_at"].isoformat()  # keep the same ISO-string shape jobs/JSON use everywhere else
+            result[d["id"]] = d
+        return result
 
 
-def save_store(store):
-    STORE_PATH.write_text(json.dumps(store, indent=2, ensure_ascii=False), encoding="utf-8")
+def upsert_reel(job):
+    row = {col: job.get(col) for col in REEL_COLUMNS}
+    if row.get("created_at"):
+        row["created_at"] = datetime.fromisoformat(row["created_at"])  # explicit parse, not implicit string coercion
+    row["segments"] = psycopg2.extras.Json(row["segments"])
+    row["meta"] = psycopg2.extras.Json(row["meta"])
+    row["analysis"] = psycopg2.extras.Json(row["analysis"])
+    with db_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO reels (id, url, status, transcript, segments, video_file, thumb_file,
+                               created_at, meta, analysis, error)
+            VALUES (%(id)s, %(url)s, %(status)s, %(transcript)s, %(segments)s, %(video_file)s,
+                    %(thumb_file)s, %(created_at)s, %(meta)s, %(analysis)s, %(error)s)
+            ON CONFLICT (id) DO UPDATE SET
+                url = EXCLUDED.url, status = EXCLUDED.status, transcript = EXCLUDED.transcript,
+                segments = EXCLUDED.segments, video_file = EXCLUDED.video_file,
+                thumb_file = EXCLUDED.thumb_file, meta = EXCLUDED.meta,
+                analysis = EXCLUDED.analysis, error = EXCLUDED.error
+            """,
+            row,
+        )
+
+
+def persist_reel(rid):
+    """Snapshot the in-memory job and write it through to the DB + store_cache,
+    serialized per reel id so a worker thread and a manual re-trigger touching
+    the same reel can't blind-overwrite each other."""
+    with _lock_for(rid):
+        with jobs_lock:
+            snapshot = dict(jobs[rid])
+        upsert_reel(snapshot)
+        with store_cache_lock:
+            store_cache[rid] = snapshot
+    return snapshot
 
 
 def load_settings():
-    if SETTINGS_PATH.exists():
-        return {**DEFAULT_SETTINGS, **json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))}
-    return dict(DEFAULT_SETTINGS)
+    with settings_cache_lock:
+        if settings_cache:
+            return dict(settings_cache)
+    with db_cursor() as cur:
+        cur.execute("SELECT provider, base_url, model, api_key FROM settings WHERE id = 1")
+        row = cur.fetchone()
+    s = {**DEFAULT_SETTINGS, **(dict(row) if row else {})}
+    with settings_cache_lock:
+        settings_cache.update(s)
+    return dict(s)
 
 
 def save_settings(settings):
-    SETTINGS_PATH.write_text(json.dumps(settings, indent=2), encoding="utf-8")
+    with db_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO settings (id, provider, base_url, model, api_key)
+            VALUES (1, %(provider)s, %(base_url)s, %(model)s, %(api_key)s)
+            ON CONFLICT (id) DO UPDATE SET
+                provider = EXCLUDED.provider, base_url = EXCLUDED.base_url,
+                model = EXCLUDED.model, api_key = EXCLUDED.api_key
+            """,
+            settings,
+        )
+    with settings_cache_lock:
+        settings_cache.update(settings)
 
 
 def format_timestamp(seconds):
@@ -126,6 +276,60 @@ def reel_id_for(url):
     return hashlib.sha1(url.encode("utf-8")).hexdigest()[:16]
 
 
+FILLER_WORDS_RE = re.compile(r"\b(um+|uh+|like|basically|actually|literally|you know|kind of|sort of)\b", re.IGNORECASE)
+YOU_RE = re.compile(r"\b(you|your|you're|youre)\b", re.IGNORECASE)
+NUMBER_RE = re.compile(r"\d+")
+SENTENCE_SPLIT_RE = re.compile(r"[.!?]+")
+
+
+def compute_metrics(job):
+    """Pure function over a job's existing fields - nothing here is persisted to the
+    store, it's cheap enough to recompute per request."""
+    transcript = (job.get("transcript") or "").strip()
+    segments = job.get("segments") or []
+    analysis = job.get("analysis") or {}
+    meta = job.get("meta") or {}
+
+    word_count = len(transcript.split())
+    duration_sec = segments[-1]["end"] if segments else None
+    wpm = round(word_count / (duration_sec / 60), 1) if duration_sec else None
+
+    sentences = [s for s in SENTENCE_SPLIT_RE.split(transcript) if s.strip()]
+    sentence_count = len(sentences)
+    avg_sentence_len = round(word_count / sentence_count, 1) if sentence_count else None
+
+    filler_count = len(FILLER_WORDS_RE.findall(transcript))
+    you_count = len(YOU_RE.findall(transcript))
+
+    hook_word_count = None
+    cta_position_pct = None
+    if analysis:
+        hook_text = analysis.get("hook") or ""
+        hook_word_count = len(hook_text.split())
+        pre_cta_len = len(hook_text) + len(analysis.get("promise") or "") + len(analysis.get("validation") or "")
+        cta_position_pct = round(pre_cta_len / len(transcript) * 100, 1) if transcript else None
+
+    like_count = meta.get("like_count") or 0
+    comment_count = meta.get("comment_count") or 0
+
+    return {
+        "duration_sec": duration_sec,
+        "word_count": word_count,
+        "wpm": wpm,
+        "sentence_count": sentence_count,
+        "avg_sentence_len": avg_sentence_len,
+        "question_count": transcript.count("?"),
+        "filler_per_1k": round(filler_count / word_count * 1000, 1) if word_count else None,
+        "you_density": round(you_count / word_count * 100, 1) if word_count else None,
+        "number_mentions": len(NUMBER_RE.findall(transcript)),
+        "hook_word_count": hook_word_count,
+        "cta_position_pct": cta_position_pct,
+        "like_count": like_count,
+        "comment_count": comment_count,
+        "engagement_score": like_count + comment_count,
+    }
+
+
 def update_job(rid, **fields):
     with jobs_lock:
         jobs[rid].update(fields)
@@ -144,10 +348,11 @@ def downloader_worker():
     while True:
         rid, url = download_queue.get()
         try:
-            store = load_store()
-            if rid in store and store[rid].get("status") == "done":
+            with store_cache_lock:
+                cached = store_cache.get(rid)
+            if cached and cached.get("status") == "done":
                 with jobs_lock:
-                    jobs[rid] = store[rid]
+                    jobs[rid] = cached
                 continue
 
             update_job(rid, status="downloading")
@@ -215,12 +420,7 @@ def transcriber_worker():
             else:  # backfill: reel is already done, just fill in segments
                 update_job(rid, segments=segments)
 
-            with jobs_lock:
-                job_snapshot = dict(jobs[rid])
-            with store_lock:
-                store = load_store()
-                store[rid] = job_snapshot
-                save_store(store)
+            persist_reel(rid)
 
         except Exception as exc:
             print(f"[transcriber_worker] {kind} failed for {rid}: {exc}", file=sys.stderr)
@@ -238,17 +438,9 @@ def analysis_worker():
             with jobs_lock:
                 job = jobs.get(rid)
             if job and job.get("transcript") and settings.get("api_key") and not job.get("analysis"):
-                if settings["provider"] == "anthropic":
-                    analysis = call_anthropic(settings, job["transcript"])
-                else:
-                    analysis = call_openai(settings, job["transcript"])
+                analysis = call_ai(settings, ANALYSIS_PROMPT + job["transcript"])
                 update_job(rid, analysis=analysis)
-                with jobs_lock:
-                    job_snapshot = dict(jobs[rid])
-                with store_lock:
-                    store = load_store()
-                    store[rid] = job_snapshot
-                    save_store(store)
+                persist_reel(rid)
         except Exception as exc:
             print(f"[analysis_worker] failed for {rid}: {exc}", file=sys.stderr)
         finally:
@@ -271,17 +463,15 @@ def link_worker():
                     meta = dict(job.get("meta") or {})
                     meta["cdn_url"] = cdn_url
                     update_job(rid, meta=meta)
-                    with jobs_lock:
-                        job_snapshot = dict(jobs[rid])
-                    with store_lock:
-                        store = load_store()
-                        store[rid] = job_snapshot
-                        save_store(store)
+                    persist_reel(rid)
         except Exception as exc:
             print(f"[link_worker] failed for {rid}: {exc}", file=sys.stderr)
         finally:
             link_queue.task_done()
 
+
+store_cache = load_store()
+load_settings()  # seed settings_cache
 
 for _ in range(DOWNLOAD_WORKERS):
     threading.Thread(target=downloader_worker, daemon=True).start()
@@ -304,9 +494,9 @@ def media(filename):
 
 @app.route("/api/jobs")
 def all_jobs():
-    store = load_store()
+    with store_cache_lock:
+        merged = dict(store_cache)
     with jobs_lock:
-        merged = dict(store)
         merged.update(jobs)
         snapshot = list(merged.values())
 
@@ -318,23 +508,23 @@ def all_jobs():
     return jsonify(active + finished)
 
 
-def call_openai(settings, transcript):
+def call_openai(settings, prompt):
     resp = requests.post(
         f"{settings['base_url'].rstrip('/')}/chat/completions",
         headers={"Authorization": f"Bearer {settings['api_key']}", "Content-Type": "application/json"},
         json={
             "model": settings["model"],
-            "messages": [{"role": "user", "content": ANALYSIS_PROMPT + transcript}],
+            "messages": [{"role": "user", "content": prompt}],
             "response_format": {"type": "json_object"},
         },
-        timeout=60,
+        timeout=120,
     )
     resp.raise_for_status()
     content = resp.json()["choices"][0]["message"]["content"]
     return json.loads(content)
 
 
-def call_anthropic(settings, transcript):
+def call_anthropic(settings, prompt, max_tokens=2048):
     resp = requests.post(
         f"{settings['base_url'].rstrip('/')}/v1/messages",
         headers={
@@ -344,11 +534,11 @@ def call_anthropic(settings, transcript):
         },
         json={
             "model": settings["model"],
-            "max_tokens": 2048,
-            "messages": [{"role": "user", "content": ANALYSIS_PROMPT + transcript +
+            "max_tokens": max_tokens,
+            "messages": [{"role": "user", "content": prompt +
                           "\n\nRespond with ONLY the JSON object and nothing else - no markdown fencing, no commentary."}],
         },
-        timeout=60,
+        timeout=120,
     )
     resp.raise_for_status()
     content = resp.json()["content"][0]["text"].strip()
@@ -357,6 +547,12 @@ def call_anthropic(settings, transcript):
         if content.startswith("json"):
             content = content[4:]
     return json.loads(content)
+
+
+def call_ai(settings, prompt, max_tokens=2048):
+    if settings["provider"] == "anthropic":
+        return call_anthropic(settings, prompt, max_tokens=max_tokens)
+    return call_openai(settings, prompt)
 
 
 @app.route("/api/settings", methods=["GET"])
@@ -388,7 +584,8 @@ def analyze(rid):
     with jobs_lock:
         job = jobs.get(rid)
     if not job:
-        job = load_store().get(rid)
+        with store_cache_lock:
+            job = store_cache.get(rid)
         if job:
             with jobs_lock:
                 jobs[rid] = job
@@ -397,18 +594,12 @@ def analyze(rid):
         return jsonify({"error": "This reel isn't transcribed yet."}), 400
 
     try:
-        if settings["provider"] == "anthropic":
-            analysis = call_anthropic(settings, job["transcript"])
-        else:
-            analysis = call_openai(settings, job["transcript"])
+        analysis = call_ai(settings, ANALYSIS_PROMPT + job["transcript"])
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
     update_job(rid, analysis=analysis)
-    with store_lock:
-        store = load_store()
-        store[rid] = jobs[rid]
-        save_store(store)
+    persist_reel(rid)
 
     return jsonify(analysis)
 
@@ -423,9 +614,9 @@ def export_prepare():
     settings = load_settings()
     has_key = bool(settings.get("api_key"))
 
-    store = load_store()
+    with store_cache_lock:
+        merged = dict(store_cache)
     with jobs_lock:
-        merged = dict(store)
         merged.update(jobs)
         done_jobs = [j for j in merged.values() if j.get("status") == "done"]
 
@@ -468,9 +659,9 @@ def export_csv():
     include_timestamps = request.args.get("timestamps") == "1"
     include_analysis = request.args.get("analysis") == "1"
 
-    store = load_store()
+    with store_cache_lock:
+        merged = dict(store_cache)
     with jobs_lock:
-        merged = dict(store)
         merged.update(jobs)
         rows = [j for j in merged.values() if j.get("status") == "done"]
 
@@ -519,6 +710,248 @@ def export_csv():
     )
 
 
+def _done_jobs():
+    with store_cache_lock:
+        merged = dict(store_cache)
+    with jobs_lock:
+        merged.update(jobs)
+        return [j for j in merged.values() if j.get("status") == "done"]
+
+
+def _jsonify_row(row):
+    if row is None:
+        return None
+    return {k: (v.isoformat() if hasattr(v, "isoformat") else v) for k, v in row.items()}
+
+
+def _tiered_rows():
+    """All done reels with an AI breakdown, ranked by engagement_score and split
+    into high/mid/low thirds. Recomputed live on every call - tiers are never
+    persisted since the split depends on the whole current batch."""
+    done_jobs = [j for j in _done_jobs() if j.get("analysis")]
+    rows = [{"job": j, "metrics": compute_metrics(j)} for j in done_jobs]
+    rows.sort(key=lambda r: r["metrics"]["engagement_score"], reverse=True)
+
+    n = len(rows)
+    tier_size = max(1, n // 3)
+    for i, r in enumerate(rows):
+        if i < tier_size:
+            r["tier"] = "high"
+        elif i >= n - tier_size:
+            r["tier"] = "low"
+        else:
+            r["tier"] = "mid"
+    return rows
+
+
+@app.route("/api/analysis/categories")
+def analysis_categories():
+    with db_cursor() as cur:
+        cur.execute("SELECT slug, display_name FROM formula_categories ORDER BY sort_order")
+        return jsonify(cur.fetchall())
+
+
+@app.route("/api/analysis/overview")
+def analysis_overview():
+    rows = _tiered_rows()
+    table = [
+        {
+            "id": r["job"]["id"],
+            "title": (r["job"].get("meta") or {}).get("channel") or (r["job"].get("meta") or {}).get("uploader") or r["job"]["id"],
+            "thumb_file": r["job"].get("thumb_file"),
+            "tier": r["tier"],
+            **r["metrics"],
+        }
+        for r in rows
+    ]
+    with db_cursor() as cur:
+        cur.execute(
+            "SELECT id, generated_at, high_count, low_count, mid_count, summary, caveats "
+            "FROM analysis_runs ORDER BY generated_at DESC LIMIT 1"
+        )
+        run = cur.fetchone()
+    return jsonify({"run": _jsonify_row(run), "table": table})
+
+
+@app.route("/api/analysis/formulas")
+def analysis_formulas():
+    category = request.args.get("category")
+    query = """
+        SELECT f.*, COALESCE(array_agg(fe.reel_id) FILTER (WHERE fe.reel_id IS NOT NULL), '{}') AS evidence_reel_ids
+        FROM formulas f LEFT JOIN formula_evidence fe ON fe.formula_id = f.id
+        __WHERE__
+        GROUP BY f.id
+        ORDER BY f.category, f.rating DESC NULLS LAST, f.times_seen DESC
+    """
+    with db_cursor() as cur:
+        if category:
+            cur.execute(query.replace("__WHERE__", "WHERE f.category = %s"), (category,))
+        else:
+            cur.execute(query.replace("__WHERE__", ""))
+        rows = cur.fetchall()
+    return jsonify([_jsonify_row(r) for r in rows])
+
+
+@app.route("/api/analysis/prepare", methods=["POST"])
+def analysis_prepare():
+    settings = load_settings()
+    has_key = bool(settings.get("api_key"))
+    done_jobs = _done_jobs()
+
+    pending = set()
+    for j in done_jobs:
+        rid = j["id"]
+        if has_key and not j.get("analysis") and j.get("transcript"):
+            with jobs_lock:
+                if rid not in jobs:
+                    jobs[rid] = j
+            analysis_queue.put(rid)
+            pending.add(rid)
+
+    return jsonify({
+        "pending_ids": sorted(pending),
+        "needs_key": not has_key,
+        "eligible_count": len(done_jobs),
+    })
+
+
+@app.route("/api/analysis/generate", methods=["POST"])
+def analysis_generate():
+    settings = load_settings()
+    if not settings.get("api_key"):
+        return jsonify({"error": "No AI API key configured. Add one in Settings."}), 400
+
+    rows = _tiered_rows()
+    if len(rows) < MIN_BULK_REELS:
+        return jsonify({
+            "error": f"Need at least {MIN_BULK_REELS} reels with an AI breakdown to generate formulas "
+                     f"(have {len(rows)})."
+        }), 400
+
+    high_count = sum(1 for r in rows if r["tier"] == "high")
+    low_count = sum(1 for r in rows if r["tier"] == "low")
+    mid_count = len(rows) - high_count - low_count
+    valid_reel_ids = {r["job"]["id"] for r in rows if r["tier"] in ("high", "low")}
+
+    batch_payload = [
+        {
+            "id": r["job"]["id"],
+            "tier": r["tier"],
+            "metrics": {k: v for k, v in r["metrics"].items() if k != "engagement_score"},
+            "hook": r["job"]["analysis"].get("hook", ""),
+            "promise": r["job"]["analysis"].get("promise", ""),
+            "validation": r["job"]["analysis"].get("validation", ""),
+            "cta": r["job"]["analysis"].get("cta", ""),
+        }
+        for r in rows if r["tier"] in ("high", "low")
+    ]
+
+    with db_cursor() as cur:
+        cur.execute("SELECT slug FROM formula_categories ORDER BY sort_order")
+        category_slugs = [row["slug"] for row in cur.fetchall()]
+        cur.execute("SELECT id, category, name, description FROM formulas")
+        existing = cur.fetchall()
+
+    existing_by_id = {row["id"]: row for row in existing}
+    existing_json = [{"id": row["id"], "category": row["category"], "name": row["name"],
+                       "description": row["description"]} for row in existing]
+
+    prompt = FORMULA_ANALYSIS_PROMPT_TEMPLATE.format(
+        categories=json.dumps(category_slugs),
+        existing_formulas=json.dumps(existing_json, ensure_ascii=False) if existing_json else "(none yet - this is the first run)",
+        batch=json.dumps(batch_payload, ensure_ascii=False),
+    )
+
+    try:
+        result = call_ai(settings, prompt, max_tokens=4096)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+    # Validate the AI's response before writing anything: a hallucinated formula_id
+    # would otherwise UPDATE 0 rows and then blow up the whole transaction on the
+    # matching formula_evidence insert's FK constraint.
+    def clean_rating(value, fallback):
+        return value if isinstance(value, int) and 1 <= value <= 5 else fallback
+
+    def clean_evidence(ids):
+        return [rid for rid in (ids or []) if rid in valid_reel_ids]
+
+    matched = []
+    new_items = list(result.get("new") or [])
+    for m in (result.get("matched") or []):
+        existing_row = existing_by_id.get(m.get("formula_id"))
+        if not existing_row or m.get("category") != existing_row["category"]:
+            if m.get("category") in category_slugs and m.get("name") and m.get("description"):
+                new_items.append(m)  # hallucinated/mismatched id - fall back to treating it as new
+            continue
+        if m.get("status") not in ("working", "not_working"):
+            continue
+        matched.append({
+            "formula_id": existing_row["id"],
+            "rating": clean_rating(m.get("rating"), existing_row.get("rating") or 3),
+            "status": m["status"],
+            "reason": m.get("reason"),
+            "evidence_reel_ids": clean_evidence(m.get("evidence_reel_ids")),
+        })
+
+    cleaned_new = []
+    for n in new_items:
+        if n.get("category") not in category_slugs or not n.get("name") or not n.get("description"):
+            continue
+        if n.get("status") not in ("working", "not_working"):
+            continue
+        cleaned_new.append({
+            "category": n["category"],
+            "name": n["name"].strip(),
+            "description": n["description"],
+            "reason": n.get("reason"),
+            "rating": clean_rating(n.get("rating"), 3),
+            "status": n["status"],
+            "evidence_reel_ids": clean_evidence(n.get("evidence_reel_ids")),
+        })
+
+    with db_cursor() as cur:
+        cur.execute(
+            "INSERT INTO analysis_runs (high_count, low_count, mid_count, summary, caveats) "
+            "VALUES (%s, %s, %s, %s, %s) RETURNING id",
+            (high_count, low_count, mid_count, result.get("summary"), result.get("caveats")),
+        )
+        run_id = cur.fetchone()["id"]
+
+        for m in matched:
+            cur.execute(
+                "UPDATE formulas SET rating = %s, status = %s, reason = %s, times_seen = times_seen + 1, "
+                "updated_at = now(), last_run_id = %s WHERE id = %s",
+                (m["rating"], m["status"], m["reason"], run_id, m["formula_id"]),
+            )
+            for reel_id in m["evidence_reel_ids"]:
+                cur.execute(
+                    "INSERT INTO formula_evidence (formula_id, reel_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                    (m["formula_id"], reel_id),
+                )
+
+        for n in cleaned_new:
+            cur.execute(
+                """
+                INSERT INTO formulas (category, name, description, reason, rating, status, last_run_id)
+                VALUES (%(category)s, %(name)s, %(description)s, %(reason)s, %(rating)s, %(status)s, %(last_run_id)s)
+                ON CONFLICT (category, lower(btrim(name))) DO UPDATE SET
+                    reason = EXCLUDED.reason, rating = EXCLUDED.rating, status = EXCLUDED.status,
+                    times_seen = formulas.times_seen + 1, updated_at = now(), last_run_id = EXCLUDED.last_run_id
+                RETURNING id
+                """,
+                {**n, "last_run_id": run_id},
+            )
+            new_id = cur.fetchone()["id"]
+            for reel_id in n["evidence_reel_ids"]:
+                cur.execute(
+                    "INSERT INTO formula_evidence (formula_id, reel_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                    (new_id, reel_id),
+                )
+
+    return jsonify({"ok": True, "run_id": run_id})
+
+
 @app.route("/api/submit", methods=["POST"])
 def submit():
     data = request.get_json(force=True)
@@ -544,4 +977,4 @@ def submit():
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5151, debug=False)
+    app.run(host="127.0.0.1", port=5151, debug=False, threaded=True)

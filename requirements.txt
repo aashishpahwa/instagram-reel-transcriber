@@ -3,3 +3,5 @@ yt-dlp>=2026.7
 openai-whisper>=20250625
 torch>=2.5
 requests>=2.32
+psycopg2-binary>=2.9
+python-dotenv>=1.0
