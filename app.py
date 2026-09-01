@@ -4565,7 +4565,7 @@ Respond with ONLY a strict JSON object:
   "script": {{
     "hook": "first line(s), verbatim, <= 2 sentences",
     "promise": "one line",
-    "beats": ["1. Said: <what is said> | Shown: <what is on screen>", "2. ...", "..."],
+    "beats": [{{"said": "<the spoken words for this beat, verbatim>", "shown": "<what is on screen while it is said>"}}, "..."],
     "cta": "verbatim, or 'none - ends on <line>'",
     "on_screen_text": ["in order, one per item"],
     "caption": "with the text hook",
@@ -4575,7 +4575,7 @@ Respond with ONLY a strict JSON object:
     "duration_target_sec": integer,
     "format": "talking head | voiceover b-roll | screen recording | text on screen | ..."
   }},
-  "script_text": "the same script as plain read-aloud text: HOOK line, then each beat's spoken part on its own line, then the CTA. No markdown, no 'Said:' labels.",
+  "script_text": "ALWAYS present: the FULL script as plain copy-paste text the creator can read aloud - the hook, then each beat's 'said' part on its own line, then the CTA. No markdown, no labels, no beat numbers.",
   "what_changed": ["3-6 items: the structural differences from the original and why, each citing a lever/reel/signal"],
   "kept_from_original": ["1-3 items: the ideas/facts/lines carried over"]
 }}
@@ -4746,6 +4746,24 @@ def script_improve():
     })
 
 
+def _normalize_beats(beats):
+    """Beats as [{said, shown}] no matter how they arrive - the current prompt's
+    objects or the legacy '1. Said: ... | Shown: ...' strings."""
+    out = []
+    for b in beats or []:
+        if isinstance(b, dict):
+            said = str(b.get("said") or b.get("Said") or "").strip()
+            shown = str(b.get("shown") or b.get("Shown") or "").strip()
+        else:
+            s = re.sub(r"^\s*\d+[.)]\s*", "", str(b)).strip()
+            m = re.match(r"(?is)^(?:said:\s*)?(.*?)(?:\s*\|\s*shown:\s*(.*))?\s*$", s)
+            said = (m.group(1) or "").strip()
+            shown = (m.group(2) or "").strip()
+        if said or shown:
+            out.append({"said": said, "shown": shown})
+    return out
+
+
 @app.route("/api/script/rewrite", methods=["POST"])
 @require_login
 @require_project
@@ -4774,16 +4792,13 @@ def script_rewrite():
     new_script = result.get("script") if isinstance(result, dict) else None
     if not isinstance(new_script, dict) or not new_script.get("hook"):
         return jsonify({"error": "The model didn't return a rewrite. Try again."}), 502
+    new_script["beats"] = _normalize_beats(new_script.get("beats"))
     script_text = str(result.get("script_text") or "").strip()
     if not script_text:
-        spoken = []
-        for b in new_script.get("beats") or []:
-            s = str(b)
-            s = s.split("| Shown:")[0]
-            s = re.sub(r"^\s*\d+[.)]\s*", "", s)
-            s = re.sub(r"^\s*Said:\s*", "", s, flags=re.I)
-            spoken.append(s.strip())
-        script_text = "\n".join([str(new_script.get("hook") or "")] + spoken + ([str(new_script["cta"])] if new_script.get("cta") else []))
+        spoken = [b["said"] for b in new_script["beats"] if b.get("said")]
+        cta = str(new_script.get("cta") or "")
+        parts = [str(new_script.get("hook") or "")] + spoken + ([cta] if cta and not re.match(r"\s*none\b", cta, re.I) else [])
+        script_text = "\n\n".join(p.strip() for p in parts if p.strip())
     return jsonify({
         "title": str(result.get("title") or new_script.get("hook") or "Rewrite")[:120],
         "script": new_script,

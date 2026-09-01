@@ -1170,6 +1170,13 @@ input#compose-input:focus { border-color: var(--accent); }
 .script-card .sc-row { display: grid; grid-template-columns: 110px 1fr; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); }
 .script-card .sc-l { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; color: var(--ink-3); padding-top: 3px; }
 .script-card .sc-v ol, .script-card .sc-v ul { margin: 0 0 0 18px; }
+.sc-beats-wrap { overflow-x: auto; }
+table.sc-beats { width: 100%; border-collapse: collapse; }
+.sc-beats th, .sc-beats td { text-align: left; vertical-align: top; padding: 6px 12px 6px 0; border-bottom: 1px solid var(--line); }
+.sc-beats tr:last-child td { border-bottom: none; }
+.sc-beats th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; color: var(--ink-3); }
+.sc-beats th.n, .sc-beats td.n { width: 24px; color: var(--ink-3); padding-right: 8px; }
+.sc-beats td.shown { color: var(--ink-2); width: 38%; }
 
 /* Ask-agent floating button + drawer */
 .agent-fab { position: fixed; right: 22px; bottom: 22px; z-index: 60; padding: 10px 16px; border-radius: 99px; border: 1px solid var(--accent); background: var(--accent); color: #fff; font: inherit; font-weight: 600; font-size: 0.86rem; box-shadow: 0 6px 24px rgba(0,0,0,0.18); cursor: pointer; }
@@ -3310,18 +3317,43 @@ window.deleteAgentDraft = async function (id) {
   agentDraft = null; await toggleAgentDrafts(); await toggleAgentDrafts();
 };
 
+// Beats arrive either as {said, shown} objects (current API) or as legacy
+// '1. Said: ... | Shown: ...' strings (old drafts, agent chat). Normalize once,
+// render everywhere as a proper table plus a copy-pasteable full script.
+function scBeatParts(b) {
+  if (b && typeof b === 'object') return { said: String(b.said ?? b.Said ?? '').trim(), shown: String(b.shown ?? b.Shown ?? '').trim() };
+  const s = String(b == null ? '' : b).replace(/^\s*\d+[.)]\s*/, '');
+  const m = s.match(/^\s*(?:said:\s*)?([\s\S]*?)(?:\s*\|\s*shown:\s*([\s\S]*))?\s*$/i);
+  return { said: (m ? m[1] : s).trim(), shown: (m && m[2] ? m[2] : '').trim() };
+}
+function scBeatsTable(beats) {
+  const rows = (beats || []).map(scBeatParts).filter(r => r.said || r.shown);
+  if (!rows.length) return '';
+  const anyShown = rows.some(r => r.shown);
+  return `<div class="sc-beats-wrap"><table class="sc-beats">
+    <thead><tr><th class="n">#</th><th>Said</th>${anyShown ? '<th>Shown</th>' : ''}</tr></thead>
+    <tbody>${rows.map((r, i) => `<tr><td class="n">${i + 1}</td><td>${escapeHtml(r.said)}</td>${anyShown ? `<td class="shown">${escapeHtml(r.shown)}</td>` : ''}</tr>`).join('')}</tbody>
+  </table></div>`;
+}
+function scFullScript(s) {
+  const beats = (s.beats || []).map(scBeatParts);
+  const cta = String(s.cta || '');
+  const parts = [s.hook || '', ...beats.map(b => b.said), /^\s*none\b/i.test(cta) ? '' : cta];
+  return parts.map(x => String(x).trim()).filter(Boolean).join('\n\n');
+}
+
 function renderScriptCard(d) {
   const s = d.script || {};
   const list = (arr) => (arr || []).map(x => `<li>${escapeHtml(typeof x === 'string' ? x : JSON.stringify(x))}</li>`).join('');
   const levers = s.levers && typeof s.levers === 'object' ? Object.entries(s.levers).flatMap(([k, v]) => (Array.isArray(v) ? v : [v]).map(x => `<span class="chip tag on" title="${escapeHtml(k)}">${escapeHtml(prettyTag(x))}</span>`)).join('') : '';
-  const plain = [`HOOK: ${s.hook || ''}`, s.promise ? `PROMISE: ${s.promise}` : '', ...(s.beats || []).map((b, i) => `${i + 1}. ${typeof b === 'string' ? b : JSON.stringify(b)}`), s.cta ? `CTA: ${s.cta}` : '', (s.on_screen_text || []).length ? `ON SCREEN: ${(s.on_screen_text || []).join(' | ')}` : '', s.caption ? `CAPTION: ${s.caption}` : ''].filter(Boolean).join('\n');
+  const plain = scFullScript(s);
   return `
     <div class="script-card">
       <div class="sc-top"><b>${escapeHtml(d.title || 'Draft')}</b><span class="pb-meta">${relTime(d.created_at)}</span>
         <span style="margin-left:auto;display:flex;gap:8px"><button class="link-btn" onclick="navigator.clipboard.writeText(${JSON.stringify(plain).replace(/"/g, '&quot;')})">Copy script</button><button class="link-btn danger-text" onclick="deleteAgentDraft(${d.id})">Delete</button></span></div>
       <div class="sc-row"><div class="sc-l">Hook</div><div class="sc-v ov-quote">“${escapeHtml(s.hook || '')}”</div></div>
       ${s.promise ? `<div class="sc-row"><div class="sc-l">Promise</div><div class="sc-v">${escapeHtml(s.promise)}</div></div>` : ''}
-      ${(s.beats || []).length ? `<div class="sc-row"><div class="sc-l">Beats</div><div class="sc-v"><ol>${list(s.beats)}</ol></div></div>` : ''}
+      ${(s.beats || []).length ? `<div class="sc-row"><div class="sc-l">Beats</div><div class="sc-v">${scBeatsTable(s.beats)}</div></div>` : ''}
       ${s.cta ? `<div class="sc-row"><div class="sc-l">CTA</div><div class="sc-v">“${escapeHtml(s.cta)}”</div></div>` : ''}
       ${(s.on_screen_text || []).length ? `<div class="sc-row"><div class="sc-l">On screen</div><div class="sc-v"><ul>${list(s.on_screen_text)}</ul></div></div>` : ''}
       ${s.caption ? `<div class="sc-row"><div class="sc-l">Caption</div><div class="sc-v">${escapeHtml(s.caption)}</div></div>` : ''}
@@ -3329,6 +3361,7 @@ function renderScriptCard(d) {
       ${s.why ? `<div class="sc-row"><div class="sc-l">Why</div><div class="sc-v">${agentMd(typeof s.why === 'string' ? s.why : JSON.stringify(s.why))}</div></div>` : ''}
       ${s.expected_signals ? `<div class="sc-row"><div class="sc-l">Expected signals</div><div class="sc-v">${escapeHtml(typeof s.expected_signals === 'string' ? s.expected_signals : Object.entries(s.expected_signals).map(([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`).join(' · '))}</div></div>` : ''}
       ${s.duration_target_sec ? `<div class="sc-row"><div class="sc-l">Duration</div><div class="sc-v">${escapeHtml(String(s.duration_target_sec))}s${s.format ? ' · ' + escapeHtml(String(s.format)) : ''}</div></div>` : ''}
+      ${plain ? `<div class="sc-row"><div class="sc-l">Full script</div><div class="sc-v"><pre class="rms-pre">${escapeHtml(plain)}</pre></div></div>` : ''}
     </div>`;
 }
 
@@ -3712,6 +3745,7 @@ function renderRmsRewrite() {
   }
   const s = d.script || {};
   const stale = d.forText !== rmsText.trim();
+  const fullText = (d.script_text || '').trim() || scFullScript(s);
   const list = (arr) => (arr || []).map(x => `<li>${escapeHtml(typeof x === 'string' ? x.replace(/^\s*\d+[.)]\s*/, '') : JSON.stringify(x))}</li>`).join('');
   const levers = s.levers && typeof s.levers === 'object' ? Object.entries(s.levers).flatMap(([k, v]) => (Array.isArray(v) ? v : [v]).filter(Boolean).map(x => `<span class="chip tag on" title="${escapeHtml(k)}">${escapeHtml(prettyTag(x))}</span>`)).join('') : '';
   const sig = s.expected_signals;
@@ -3723,7 +3757,7 @@ function renderRmsRewrite() {
       <div class="sc-top"><b>${escapeHtml(d.title || 'Rewrite')}</b><span class="pb-meta">${escapeHtml(angleLabel)} · ${relTime(d.generated_at)}</span></div>
       <div class="sc-row"><div class="sc-l">Hook</div><div class="sc-v ov-quote">“${escapeHtml(s.hook || '')}”</div></div>
       ${s.promise ? `<div class="sc-row"><div class="sc-l">Promise</div><div class="sc-v">${escapeHtml(s.promise)}</div></div>` : ''}
-      ${(s.beats || []).length ? `<div class="sc-row"><div class="sc-l">Beats</div><div class="sc-v"><ol>${list(s.beats)}</ol></div></div>` : ''}
+      ${(s.beats || []).length ? `<div class="sc-row"><div class="sc-l">Beats</div><div class="sc-v">${scBeatsTable(s.beats)}</div></div>` : ''}
       ${s.cta ? `<div class="sc-row"><div class="sc-l">CTA</div><div class="sc-v">“${escapeHtml(s.cta)}”</div></div>` : ''}
       ${(s.on_screen_text || []).length ? `<div class="sc-row"><div class="sc-l">On screen</div><div class="sc-v"><ul>${list(s.on_screen_text)}</ul></div></div>` : ''}
       ${s.caption ? `<div class="sc-row"><div class="sc-l">Caption</div><div class="sc-v">${escapeHtml(s.caption)}</div></div>` : ''}
@@ -3734,11 +3768,11 @@ function renderRmsRewrite() {
     </div>
     ${(d.what_changed || []).length ? `<div class="rms-h">What changed</div><ul class="rms-list">${d.what_changed.map(x => `<li>${agentMd(x)}</li>`).join('')}</ul>` : ''}
     ${(d.kept_from_original || []).length ? `<div class="rms-h">Kept from your draft</div><ul class="rms-list good">${d.kept_from_original.map(x => `<li>${agentMd(x)}</li>`).join('')}</ul>` : ''}
-    <div class="rms-h">Read-aloud version</div>
-    <pre class="rms-pre">${escapeHtml(d.script_text || '')}</pre>
+    <div class="rms-h">Full script</div>
+    <pre class="rms-pre">${escapeHtml(fullText)}</pre>
     <div class="rms-toolbar">
-      <button class="primary" onclick="rmsUse(${JSON.stringify(d.script_text || '').replace(/"/g, '&quot;')})">Use as my script</button>
-      <button class="ghost" onclick="rmsCopy(${JSON.stringify(d.script_text || '').replace(/"/g, '&quot;')})">Copy</button>
+      <button class="primary" onclick="rmsUse(${JSON.stringify(fullText).replace(/"/g, '&quot;')})">Use as my script</button>
+      <button class="ghost" onclick="rmsCopy(${JSON.stringify(fullText).replace(/"/g, '&quot;')})">Copy full script</button>
       <button class="ghost" onclick="rmsSaveDraft()">Save as draft</button>
       <span class="pb-meta" style="margin-left:auto">${d.model ? escapeHtml(d.model) : ''}</span>
     </div>`;
