@@ -5,7 +5,8 @@
       "name": "reel-transcriber",
       "runtimeExecutable": "venv\\Scripts\\python.exe",
       "runtimeArgs": ["app.py"],
-      "port": 5151
+      "port": 5151,
+      "autoPort": true
     }
   ]
 }
