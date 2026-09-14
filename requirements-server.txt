@@ -1,0 +1,11 @@
+# Server / container install: everything app.py needs except local Whisper.
+# Transcription on a box without a GPU goes through Groq's hosted Whisper
+# (PLATFORM_GROQ_API_KEY or a per-user key in Settings), so torch and
+# openai-whisper - several GB of wheels - are left out on purpose.
+flask>=3.1
+yt-dlp>=2026.7
+requests>=2.32
+psycopg2-binary>=2.9
+python-dotenv>=1.0
+PyJWT[crypto]>=2.9
+gunicorn>=23.0

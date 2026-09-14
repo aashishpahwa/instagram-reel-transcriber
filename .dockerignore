@@ -1,0 +1,17 @@
+.git
+.github
+venv
+__pycache__
+*.pyc
+data
+tmp
+docs
+.env
+.env.*
+!.env.example
+*.mp4
+*.jpg
+.claude
+.DS_Store
+start.bat
+migrate_to_neon.py

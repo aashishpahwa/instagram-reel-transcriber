@@ -58,7 +58,7 @@ flowchart LR
 - **Bulk CSV export** — export all transcribed reels to CSV with checkboxes for video link, metrics, timestamped script, and AI analysis
 - **Analysis tabs** *(optional)* — a persistent, growing library of AI-generated hook/script/talking-style "formulas" (reusable pattern + rating + reasoning + evidence), built by comparing your highest- and lowest-engagement reels and accumulating/deduping across runs, backed by computed metrics like words-per-minute, filler-word density, and CTA position
 - **Rate my script** *(optional)* — paste a draft and get it scored (0-100 plus hook / promise / body / CTA / clarity / retention / voice sub-scores, each pointing at a line), edited (the fewest changes with the biggest lift, each justified), and rewritten (a full Script card in one of six angles) — all against the project's own lever stats, playbook and top reels rather than generic creator advice
-- **Creative Corner** — a per-project brainstorming board for your own ideas and scripts: quick-capture input, drag-and-drop kanban (Ideas → Scripting → Ready to film → Posted), color-coded cards with tags and search, a script editor structured as Hook / Promise / Validation / CTA with a full-script field and estimated spoken duration, reference reels linkable to any idea, and a one-click **Save as idea** on any reel's Overview tab that scaffolds a remix from its breakdown — all autosaved to the `ideas` table
+- **Creative Corner** — a per-project writing workspace for ideas and scripts: paste a loose thought or a complete draft, then let free local label detection (and a tightly rate-limited one-call AI fallback for unlabelled drafts) map Hook / Promise / Validation / CTA beside the writing canvas. Includes a wide drag-and-drop pipeline (Ideas → Scripting → Ready to film → Posted), sequenced field-level autosave, search, tags, duration, reference reels, full-board CSV download/device sharing, and an idea-aware bottom-right copilot that makes no chat call until you press Send
 - **GPU-accelerated** — uses CUDA automatically when available for fast Whisper inference
 - **One-click launch** — a `start.bat` script for Windows users to open the app without touching a terminal
 - **No Instagram account required** — the AI breakdown and Analysis tabs are the only features that need an AI provider API key, and they're entirely optional (a Neon database is required for the app to run at all — see [Database setup](#database-setup) below)
@@ -111,6 +111,19 @@ pip install torch --index-url https://download.pytorch.org/whl/cu128
 ```
 
 (Swap `cu128` for whatever CUDA version your GPU/driver supports — see the [PyTorch install matrix](https://pytorch.org/get-started/locally/).)
+
+## Deploying for a team
+
+Want one shared instance instead of everyone running it locally? The repo ships a
+[`Dockerfile`](Dockerfile), a [`docker-compose.yaml`](docker-compose.yaml) and a GitHub
+Actions workflow that publishes the image to GitHub Container Registry on every push to
+`master`. On a Hostinger VPS it is *Docker Manager -> Compose from URL -> paste this repo's
+URL -> fill in the environment variables -> Deploy*; the same compose file works on any
+Docker host. The cloud image has no GPU and no local Whisper: transcription goes through
+Groq's hosted Whisper, so `PLATFORM_GROQ_API_KEY` is effectively required there.
+
+Step-by-step, including the Neon Auth domain setting, what to send the team, and how to
+ship updates: [docs/deploy-hostinger.md](docs/deploy-hostinger.md).
 
 ## Usage
 

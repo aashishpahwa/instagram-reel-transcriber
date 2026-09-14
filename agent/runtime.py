@@ -148,6 +148,38 @@ def build_system_prompt(user_id, project_id, project, context=None):
                              "question needs more than this summary:\n" + json.dumps(brief, ensure_ascii=False, default=str))
         except Exception as exc:
             print(f"[agent] context reel failed: {exc}", file=sys.stderr)
+    idea_id = (context or {}).get("idea_id") if isinstance(context, dict) else None
+    if idea_id:
+        try:
+            a = _a()
+            with a.db_cursor() as cur:
+                cur.execute(
+                    "SELECT id, title, notes, status, tags, script, refs FROM ideas "
+                    "WHERE id = %s AND user_id = %s AND project_id = %s",
+                    (int(idea_id), user_id, project_id),
+                )
+                row = cur.fetchone()
+            if row:
+                idea = dict(row)
+                # The browser includes the live textarea because its latest
+                # keystrokes may still be inside the autosave debounce window.
+                live_draft = (context or {}).get("draft")
+                if isinstance(live_draft, str):
+                    idea["notes"] = live_draft[:12000]
+                live_script = (context or {}).get("script")
+                if isinstance(live_script, dict):
+                    idea["script"] = {k: str(live_script.get(k) or "")[:12000]
+                                      for k in ("hook", "promise", "validation", "cta", "full")}
+                idea["refs"] = len(idea.get("refs") or [])
+                parts.append(
+                    "\n\nON SCREEN RIGHT NOW: the user is writing this Creative Corner draft. "
+                    '"this draft", "this script", and "it" refer to it unless they name another. '
+                    "Help in one concise response and do not call tools unless the user explicitly asks for "
+                    "library evidence, comparison, or factual research. Never overwrite or save the draft without "
+                    "the user's clear request:\n" + json.dumps(idea, ensure_ascii=False, default=str)
+                )
+        except Exception as exc:
+            print(f"[agent] context idea failed: {exc}", file=sys.stderr)
     parts.append("\n\nToday is " + datetime.now(timezone.utc).strftime("%Y-%m-%d") + " (UTC).")
     return "".join(parts)
 
@@ -376,6 +408,22 @@ def _summarise(name, result):
     return "done"
 
 
+_IDEA_TOOL_REQUEST_RE = _re.compile(
+    r"\b(?:search|research|fact[ -]?check|verify|sources?|citations?|evidence|compare|comparison|"
+    r"benchmark|metrics?|stats?|data|library|top reels?|best reels?|saved reels?|similar reels?)\b",
+    _re.I,
+)
+
+
+def _idea_request_needs_tools(text):
+    """Keep normal draft coaching to one schema-free model call.
+
+    The full library tools remain available when the user clearly asks for
+    evidence, research, reel comparisons or project data.
+    """
+    return bool(_IDEA_TOOL_REQUEST_RE.search(text or ""))
+
+
 def run_turn(user_id, project_id, thread_id, user_text, settings, project, max_rounds=MAX_ROUNDS, context=None):
     """Generator of events (see module docstring). Persists as it goes."""
     user_text = (user_text or "").strip()
@@ -390,7 +438,13 @@ def run_turn(user_id, project_id, thread_id, user_text, settings, project, max_r
     except Exception as exc:
         print(f"[agent] system prompt failed: {exc}", file=sys.stderr)
         system = prompts.SYSTEM_PROMPT
-    history = load_messages(thread_id, limit=HISTORY_MESSAGES)
+    focused_idea = isinstance(context, dict) and bool(context.get("idea_id"))
+    idea_wants_tools = focused_idea and _idea_request_needs_tools(user_text)
+    history_limit = 8 if focused_idea else HISTORY_MESSAGES
+    tool_result_chars = 3500 if focused_idea else TOOL_RESULT_CHARS
+    if focused_idea:
+        max_rounds = min(max_rounds, 2)
+    history = load_messages(thread_id, limit=history_limit)
     provider = settings.get("provider") or "openai"
     responses_api = provider != "anthropic" and _uses_responses_api(settings)
     to_provider = (_history_to_anthropic if provider == "anthropic"
@@ -403,7 +457,7 @@ def run_turn(user_id, project_id, thread_id, user_text, settings, project, max_r
     yield {"type": "status", "text": "Thinking…"}
     while True:
         rounds += 1
-        allow_tools = rounds <= max_rounds
+        allow_tools = rounds <= max_rounds and (not focused_idea or idea_wants_tools)
         try:
             reply = _call(settings, system, messages, allow_tools=allow_tools, **chain)
         except requests.HTTPError as exc:
@@ -441,8 +495,8 @@ def run_turn(user_id, project_id, thread_id, user_text, settings, project, max_r
             except Exception as exc:
                 result = {"error": f"{type(exc).__name__}: {exc}"}
             text = json.dumps(result, ensure_ascii=False, default=str)
-            if len(text) > TOOL_RESULT_CHARS:
-                text = text[:TOOL_RESULT_CHARS] + f'... [truncated, {len(text)} chars total - narrow the query]'
+            if len(text) > tool_result_chars:
+                text = text[:tool_result_chars] + f'... [truncated, {len(text)} chars total - narrow the query]'
             results.append({"id": call["id"], "name": call["name"], "result": text})
             yield {"type": "tool_result", "id": call["id"], "name": call["name"],
                    "summary": _summarise(call["name"], result), "ms": int((time.time() - started) * 1000)}
@@ -456,7 +510,7 @@ def run_turn(user_id, project_id, thread_id, user_text, settings, project, max_r
                                    for r in results]}
         else:
             # Rebuild provider messages from the persisted rows so both paths stay identical.
-            history = load_messages(thread_id, limit=HISTORY_MESSAGES)
+            history = load_messages(thread_id, limit=history_limit)
             messages = to_provider(history)
         if rounds >= max_rounds:
             yield {"type": "status", "text": "Wrapping up (tool budget reached)…"}

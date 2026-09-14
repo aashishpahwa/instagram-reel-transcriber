@@ -195,3 +195,27 @@ CREATE TABLE ideas (
   project_id bigint NOT NULL REFERENCES projects(id) ON DELETE CASCADE
 );
 CREATE INDEX ideas_project_idx ON ideas (project_id, status, ord);
+
+-- Rate my script: immutable snapshots. Every successful run is inserted, even
+-- when the text is unchanged; previous_rating_id links an edited re-rating to
+-- the result the user was responding to.
+CREATE TABLE script_ratings (
+  id bigserial PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+  project_id bigint NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  previous_rating_id bigint REFERENCES script_ratings(id) ON DELETE SET NULL,
+  title text NOT NULL DEFAULT '',
+  goal text NOT NULL DEFAULT '',
+  script text NOT NULL,
+  script_hash text NOT NULL,
+  rating jsonb NOT NULL,
+  model text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX script_ratings_project_created_idx
+  ON script_ratings (project_id, created_at DESC, id DESC);
+CREATE INDEX script_ratings_user_project_idx
+  ON script_ratings (user_id, project_id);
+CREATE INDEX script_ratings_previous_idx
+  ON script_ratings (previous_rating_id)
+  WHERE previous_rating_id IS NOT NULL;

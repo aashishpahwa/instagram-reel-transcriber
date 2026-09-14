@@ -1,0 +1,57 @@
+# Deploy with Hostinger Docker Manager: "Compose from URL", paste the GitHub
+# repository URL, and it reads this file from the master branch. It only fetches
+# this file - it does not clone the repo - so there is no `build:` here; the
+# image is the one .github/workflows/docker-image.yml publishes on every push
+# to master. Every ${VAR} below comes from the "Environment variables" box in
+# Docker Manager (or a .env file next to this compose file when run by hand).
+services:
+  app:
+    image: ghcr.io/aashishpahwa/instagram-reel-transcriber:latest
+    pull_policy: always
+    restart: unless-stopped
+    environment:
+      # Required. Fail the deploy loudly rather than boot a server that 500s.
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required - the Neon connection string}
+      NEON_AUTH_BASE_URL: ${NEON_AUTH_BASE_URL:?NEON_AUTH_BASE_URL is required - Neon console -> Auth}
+      # Strongly recommended: platform-wide AI keys so the team needs no setup.
+      # The Groq key is what transcribes in the cloud (no local Whisper here).
+      PLATFORM_API_KEY: ${PLATFORM_API_KEY:-}
+      PLATFORM_GROQ_API_KEY: ${PLATFORM_GROQ_API_KEY:-}
+      # Instagram session cookies (Netscape cookies.txt, raw or base64) - a
+      # datacenter IP is far more likely to be login-walled than your laptop.
+      YTDLP_COOKIES_CONTENT: ${YTDLP_COOKIES_CONTENT:-}
+      INSTAGRAM_ACCOUNT_ID: ${INSTAGRAM_ACCOUNT_ID:-}
+      # Optional tuning / search keys - see .env.example.
+      GOOD_VIEW_THRESHOLD: ${GOOD_VIEW_THRESHOLD:-50000}
+      AMAZING_VIEW_THRESHOLD: ${AMAZING_VIEW_THRESHOLD:-1000000}
+      REACH_BREAKOUT_MULTIPLE: ${REACH_BREAKOUT_MULTIPLE:-3.0}
+      REACH_ABOVE_MULTIPLE: ${REACH_ABOVE_MULTIPLE:-1.0}
+      REACH_BASELINE_MULTIPLE: ${REACH_BASELINE_MULTIPLE:-0.3}
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+      LANGSEARCH_API_KEY: ${LANGSEARCH_API_KEY:-}
+      BRAVE_API_KEY: ${BRAVE_API_KEY:-}
+    volumes:
+      # Downloaded reels, thumbnails, storyboard frames, cookies.txt.
+      - reel-data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5151/api/auth-config', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    # HTTPS via the Traefik project Hostinger's "Docker and Traefik" template
+    # ships (host-network Traefik, Let's Encrypt, HTTP->HTTPS redirect). Set
+    # APP_HOST to a hostname that resolves to the VPS - the srvNNNN.hstgr.cloud
+    # name every Hostinger VPS gets works out of the box.
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.reel-transcriber.rule=Host(`${APP_HOST:-reels.localhost}`)
+      - traefik.http.routers.reel-transcriber.entrypoints=websecure
+      - traefik.http.routers.reel-transcriber.tls.certresolver=letsencrypt
+      - traefik.http.services.reel-transcriber.loadbalancer.server.port=5151
+    # No Traefik on your box? Delete the labels above and publish the port instead:
+    # ports:
+    #   - "5151:5151"
+
+volumes:
+  reel-data:

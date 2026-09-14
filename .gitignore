@@ -9,3 +9,4 @@ data/
 # .env copies/backups carry live credentials - only the blank template is tracked
 .env.*
 !.env.example
+tmp/

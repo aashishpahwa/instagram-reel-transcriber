@@ -28,7 +28,7 @@
   --paper-3: #dcd9d2;   /* recessed: wells, hovers */
   --ink:     #14130f;
   --ink-2:   #5f5b53;   /* secondary text */
-  --ink-3:   #938e85;   /* tertiary / placeholder */
+  --ink-3:   #716d65;   /* tertiary / placeholder; still readable at small sizes */
   --line:    #cfcbc3;
   --line-2:  #bab5ab;
 
@@ -59,7 +59,7 @@
     --paper-3: #262421;
     --ink:     #f0eee9;
     --ink-2:   #9a948b;
-    --ink-3:   #6e6960;
+    --ink-3:   #918a80;
     --line:    #2c2a26;
     --line-2:  #3b3833;
 
@@ -737,8 +737,9 @@ input#compose-input:focus { border-color: var(--accent); }
   background: var(--paper-2); color: var(--ink); border: 1px solid var(--line);
   border-radius: var(--r); padding: 7px 10px; font-size: 0.8rem; font-family: var(--font); outline: none;
 }
-.idea-save-state { font-size: 0.7rem; font-family: var(--mono); color: var(--ink-3); min-width: 64px; text-align: right; }
+.idea-save-state { font-size: 0.7rem; font-family: var(--mono); color: var(--ink-3); min-width: 64px; text-align: right; white-space: nowrap; }
 .idea-save-state.saved { color: var(--ok); }
+.idea-save-state.error { color: var(--danger); }
 .color-dots { display: flex; gap: 6px; align-items: center; }
 .color-dot { width: 17px; height: 17px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; background: var(--sticky); opacity: 0.8; }
 .color-dot:hover { opacity: 1; }
@@ -796,6 +797,147 @@ input#compose-input:focus { border-color: var(--accent); }
   max-width: 380px; width: 100%;
   background: var(--paper-2); color: var(--ink); border: 1px solid var(--line);
   border-radius: var(--r); padding: 7px 10px; font-size: 0.8rem; font-family: var(--font); outline: none;
+}
+
+/* Creative Corner v2: use the canvas for writing, not empty margins. */
+.main-inner.corner-wide { max-width: 1480px; padding-top: 30px; }
+.corner-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 18px; }
+.corner-hero h1 {
+  font-family: var(--display); font-weight: 400; text-transform: uppercase;
+  font-size: 3rem; line-height: 0.94; letter-spacing: 0.005em; margin: 6px 0;
+}
+.corner-hero .sub { max-width: 660px; color: var(--ink-3); font-size: 0.84rem; line-height: 1.5; }
+.corner-capture-panel {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px;
+  background: var(--paper-2); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  border-radius: var(--r-lg); padding: 12px; margin-bottom: 14px;
+}
+.corner-capture-panel textarea {
+  min-height: 54px; max-height: 180px; resize: vertical; border: 0; outline: 0;
+  background: transparent; color: var(--ink); padding: 7px 8px; line-height: 1.5; font-size: 0.91rem;
+}
+.corner-capture-panel textarea::placeholder { color: var(--ink-3); }
+.corner-capture-actions { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 7px; }
+.corner-capture-actions .hint { white-space: nowrap; }
+.corner-toolbar { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; flex-wrap: wrap; }
+.corner-summary { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.corner-stat {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border: 1px solid var(--line);
+  background: var(--paper-2); border-radius: 99px; color: var(--ink-2); font-size: 0.72rem;
+}
+.corner-stat b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.corner-toolbar .spacer { flex: 1; }
+.corner-toolbar .corner-search { width: min(250px, 100%); }
+.corner-export-actions { display: flex; align-items: center; gap: 6px; }
+.corner-export-actions .ghost { white-space: nowrap; }
+.corner-board { grid-template-columns: repeat(4, minmax(235px, 1fr)); gap: 14px; }
+.corner-col { min-height: 290px; padding: 10px; background: color-mix(in srgb, var(--paper-2) 82%, transparent); }
+.corner-col[data-status="idea"] { --stage: #c99a1f; }
+.corner-col[data-status="scripting"] { --stage: var(--accent); }
+.corner-col[data-status="ready"] { --stage: var(--ok); }
+.corner-col[data-status="posted"] { --stage: var(--ink-2); }
+.corner-col-head { color: var(--stage); border-bottom: 1px solid var(--line); margin-bottom: 8px; padding-bottom: 9px; }
+.corner-col-head .count { color: var(--ink-2); }
+.corner-col-empty { padding: 28px 8px; line-height: 1.5; }
+.idea-card {
+  width: 100%; display: block; text-align: left; color: var(--ink); font-family: inherit;
+  transition: transform 0.14s var(--ease), border-color 0.14s var(--ease), box-shadow 0.14s var(--ease);
+}
+.idea-card:hover { transform: translateY(-1px); box-shadow: 0 7px 18px rgba(0,0,0,0.08); }
+.idea-progress { height: 2px; background: var(--paper-3); margin: 10px 0 0; overflow: hidden; }
+.idea-progress i { display: block; height: 100%; background: var(--sticky); }
+.idea-next { font-size: 0.67rem; color: var(--ink-3); }
+
+.idea-editor-shell { max-width: 1320px; margin: 0 auto; }
+.idea-editor-top {
+  position: sticky; top: -1px; z-index: 8; margin: -6px 0 18px; padding: 8px 0;
+  background: color-mix(in srgb, var(--paper) 94%, transparent); backdrop-filter: blur(10px);
+}
+.idea-editor-top .idea-context { color: var(--ink-3); font-size: 0.75rem; }
+.idea-editor-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 20px; align-items: start; margin-bottom: 18px; }
+.idea-title-input { font-size: clamp(1.7rem, 3vw, 2.45rem); letter-spacing: -0.035em; margin-bottom: 9px; }
+.idea-meta-row { margin-bottom: 0; }
+.idea-editor-grid { grid-template-columns: minmax(0, 1.45fr) minmax(340px, 0.72fr); gap: 18px; }
+.idea-workspace-card, .idea-structure-panel, .idea-refs-panel {
+  background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r-lg);
+}
+.idea-workspace-card { overflow: hidden; }
+.idea-workspace-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 15px 16px 11px; border-bottom: 1px solid var(--line); }
+.idea-workspace-head .section-label { margin-bottom: 4px; color: var(--ink); }
+.idea-workspace-head .hint { line-height: 1.45; }
+.idea-editor-grid .idea-draft-area {
+  min-height: 500px; max-height: none; resize: vertical; border: 0; border-radius: 0;
+  background: transparent; font-size: 0.98rem; line-height: 1.72; padding: 20px 22px;
+}
+.idea-editor-grid .idea-draft-area:focus { border-color: transparent; box-shadow: inset 3px 0 0 var(--accent); }
+.idea-draft-footer { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 9px 14px; border-top: 1px solid var(--line); }
+.idea-draft-metrics { display: flex; gap: 12px; color: var(--ink-3); font-family: var(--mono); font-size: 0.7rem; }
+.idea-draft-footer .spacer { flex: 1; }
+.idea-refs-panel { margin-top: 12px; padding: 14px 16px 16px; }
+.idea-refs-panel summary { cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; }
+.idea-refs-panel summary::-webkit-details-marker { display: none; }
+.idea-refs-panel summary::after { content: '+'; color: var(--ink-3); font-size: 1rem; }
+.idea-refs-panel[open] summary::after { content: '−'; }
+
+.idea-structure-panel { position: sticky; top: 58px; padding: 15px; }
+.idea-structure-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.idea-structure-head .section-label { color: var(--ink); margin-bottom: 4px; }
+.idea-structure-count { font-family: var(--mono); font-size: 0.7rem; color: var(--ink-3); white-space: nowrap; }
+.idea-ai-strip {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 9px; align-items: center;
+  padding: 10px; margin-bottom: 13px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--r);
+}
+.idea-ai-mark { color: var(--accent); font-size: 1rem; align-self: start; padding-top: 1px; }
+.idea-ai-copy { min-width: 0; }
+.idea-ai-copy b { display: block; font-size: 0.75rem; margin-bottom: 2px; }
+.idea-ai-status { color: var(--ink-3); font-size: 0.68rem; line-height: 1.35; }
+.idea-ai-status.working { color: var(--accent); }
+.idea-ai-status.done { color: var(--ok); }
+.idea-ai-status.error { color: var(--danger); }
+.idea-auto-toggle {
+  border: 1px solid var(--line-2); background: var(--paper-2); border-radius: 99px; padding: 4px 7px;
+  color: var(--ink-3); font-size: 0.66rem; white-space: nowrap;
+}
+.idea-auto-toggle[aria-checked="true"] { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 48%, var(--line)); }
+.idea-organize-row { display: flex; align-items: center; gap: 9px; margin: -3px 0 13px; }
+.idea-organize-row .hint { flex: 1; line-height: 1.4; }
+.idea-script-part { margin-bottom: 8px; border: 1px solid var(--line); border-left: 3px solid var(--part-c, var(--line-2)); border-radius: var(--r); background: var(--paper); overflow: hidden; }
+.idea-script-part .label { margin: 0; padding: 8px 10px 0; }
+.idea-editor-grid .idea-script-part textarea {
+  min-height: 66px; max-height: 180px; border: 0; border-radius: 0; border-top: 0;
+  background: transparent; padding: 7px 10px 10px; font-size: 0.82rem; line-height: 1.5;
+}
+.idea-editor-grid .idea-script-part.validation textarea { min-height: 102px; }
+
+.agent-fab.idea-mode {
+  min-width: 190px; text-align: left; border-radius: 12px; padding: 10px 13px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.24);
+}
+.agent-fab .fab-title { display: block; }
+.agent-fab .fab-note { display: block; margin-top: 2px; font-size: 0.66rem; font-weight: 500; opacity: 0.8; }
+.agent-drawer .ad-quiet-note { font-size: 0.68rem; color: var(--ink-3); padding: 7px 0 9px; border-bottom: 1px solid var(--line); }
+
+@media (max-width: 1240px) {
+  .corner-board { grid-template-columns: repeat(2, minmax(260px, 1fr)); }
+  .idea-editor-grid { grid-template-columns: minmax(0, 1fr) 350px; }
+}
+@media (max-width: 900px) {
+  .main-inner.corner-wide { padding-top: 24px; }
+  .corner-hero { align-items: flex-start; }
+  .corner-hero h1 { font-size: 2.3rem; }
+  .idea-editor-grid { grid-template-columns: 1fr; }
+  .idea-structure-panel { position: static; }
+}
+@media (max-width: 640px) {
+  .corner-capture-panel { grid-template-columns: 1fr; }
+  .corner-capture-actions { flex-direction: row; align-items: center; justify-content: space-between; }
+  .corner-capture-actions .hint { white-space: normal; }
+  .corner-board { grid-template-columns: 1fr; }
+  .idea-editor-head { grid-template-columns: 1fr; }
+  .idea-editor-top .idea-context, .color-dots { display: none; }
+  .idea-editor-grid .idea-draft-area { min-height: 360px; }
+  .agent-fab.idea-mode { min-width: 0; }
+  .agent-fab.idea-mode .fab-note { display: none; }
 }
 
 
@@ -1313,6 +1455,28 @@ input#compose-input:focus { border-color: var(--accent); }
 .rms-controls input { width: 84px; }
 .rms-controls label { font-size: 0.72rem; color: var(--ink-3); }
 .rms-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+.rms-history-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.rms-history-head h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 1.55rem; }
+.rms-history-list { display: flex; flex-direction: column; gap: 9px; }
+.rms-history-card {
+  display: grid; grid-template-columns: 74px minmax(0, 1fr) auto; gap: 14px; align-items: start;
+  padding: 13px 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--paper-2);
+}
+.rms-history-card.current { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.rms-history-score { font-family: var(--display); font-size: 1.75rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.rms-history-score small { font-family: var(--mono); color: var(--ink-3); font-size: 0.62rem; }
+.rms-history-title { font-weight: 600; line-height: 1.35; }
+.rms-history-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 3px; font-size: 0.69rem; color: var(--ink-3); }
+.rms-history-excerpt { margin-top: 7px; color: var(--ink-2); font-size: 0.79rem; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rms-history-revision { margin-top: 6px; color: var(--ink-2); font-size: 0.75rem; line-height: 1.45; }
+.rms-delta { display: inline-flex; align-items: center; border-radius: 99px; padding: 2px 7px; font: 600 0.68rem var(--mono); }
+.rms-delta.up { color: var(--ok); background: color-mix(in srgb, var(--ok) 13%, transparent); }
+.rms-delta.down { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.rms-delta.flat { color: var(--ink-3); background: var(--paper-3); }
+.rms-history-actions { display: flex; flex-direction: column; gap: 6px; align-items: stretch; min-width: 98px; }
+.rms-history-actions button { white-space: nowrap; }
+.rms-legacy-note { border-left: 3px solid var(--warn); margin-bottom: 12px; }
+.rms-error-actions { margin-top: 9px; }
 @media (max-width: 900px) {
   .rms-layout { grid-template-columns: 1fr; }
   .rms-editor { position: static; }
@@ -1320,6 +1484,8 @@ input#compose-input:focus { border-color: var(--accent); }
   .rms-two { grid-template-columns: 1fr; }
   .rms-row { grid-template-columns: 76px 1fr; }
   .rms-row .note { grid-column: 1 / -1; }
+  .rms-history-card { grid-template-columns: 58px minmax(0, 1fr); }
+  .rms-history-actions { grid-column: 1 / -1; flex-direction: row; }
 }
 
 /* ---------- responsive ---------- */
@@ -1410,7 +1576,7 @@ input#compose-input:focus { border-color: var(--accent); }
   </div>
 
   <!-- Ask-agent drawer: the same agent as the Agent page, reachable from anywhere,
-       aware of the reel on screen. Threads are shared with the page. -->
+       aware of the reel or Creative Corner draft on screen. Threads are shared. -->
   <button class="agent-fab" id="agent-fab" style="display:none" onclick="toggleAgentDrawer()" title="Ask the agent">✦ Ask agent</button>
   <div class="agent-drawer" id="agent-drawer" style="display:none"></div>
 
@@ -1765,9 +1931,12 @@ async function readJson(res, url) {
 }
 
 async function authedFetch(url, opts = {}) {
+  // Capture project before token refresh can yield. Otherwise a fast project
+  // switch can send a request prepared in A with B's project header.
+  const projectIdAtStart = activeProjectId;
   let token = await getAuthToken();
   if (!token) throw new Error('Not signed in');
-  const projectHeader = activeProjectId != null ? { 'X-Project-Id': String(activeProjectId) } : {};
+  const projectHeader = projectIdAtStart != null ? { 'X-Project-Id': String(projectIdAtStart) } : {};
   const doFetch = (t) => fetch(url, {
     ...opts,
     headers: { ...(opts.headers || {}), ...projectHeader, Authorization: `Bearer ${t}` },
@@ -1882,6 +2051,14 @@ document.addEventListener('click', closeProjectMenu);
 window.switchProject = async function (id) {
   closeProjectMenu();
   if (id === activeProjectId) return;
+  if (typeof ideaPendingPatches !== 'undefined') {
+    const unsyncedIdeaIds = [...new Set([...ideaPendingPatches.keys(), ...ideaSaveInFlight.keys()])];
+    if (unsyncedIdeaIds.length) await Promise.all(unsyncedIdeaIds.map(flushIdeaSave));
+    if (ideaPendingPatches.size || ideaSaveInFlight.size) {
+      toast('Finish syncing this draft before switching projects.', 'error');
+      return;
+    }
+  }
   activeProjectId = id;
   localStorage.setItem(LAST_PROJECT_KEY, String(id));
   resetProjectScopedState();
@@ -1908,8 +2085,12 @@ function resetProjectScopedState() {
   Object.keys(cornerIdeas).forEach(k => delete cornerIdeas[k]);
   cornerIdeaId = null;
   cornerSearch = '';
+  cornerCaptureDraft = '';
   cornerLoaded = false;
+  cornerLoadedAt = 0;
   cornerRenderKey = null;
+  [...ideaSaveTimers.keys(), ...ideaAiTimers.keys()].forEach(clearIdeaTransientState);
+  lastSidebarRenderKey = null;
   selectedIds.clear();
   selectMode = false;
   showTimestamps = false;
@@ -1954,6 +2135,7 @@ let analyzeErrorId = null;
 let reelTab = 'overview';       // which tab of the open reel is showing
 let lastReelRenderKey = null;   // fingerprint of the last reel view drawn, so a poll
                                 // tick can't rebuild it (and kill video playback)
+let lastSidebarRenderKey = null; // avoids rebuilding a long reel list on unchanged poll ticks
 const visualizing = new Set();  // reels with a visual breakdown in flight
 const framing = new Set();      // reels having their storyboard extracted
 let visualError = null;
@@ -2139,6 +2321,16 @@ function renderSidebar() {
   renderProgress();
   renderSelectBar();
 
+  const sidebarKey = JSON.stringify([
+    activeId, selectMode, deletingSelected, [...selectedIds].sort(),
+    currentBatch ? currentBatch.ids : null,
+    Object.values(jobsById).map(j => [j.id, j.status, j.ai_pending || '', j.error || '', j.created_at || '',
+      j.thumb_file || '', j.meta?.channel || j.meta?.uploader || '', j.meta?.like_count ?? null,
+      j.meta?.comment_count ?? null]).sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+  ]);
+  if (sidebarKey === lastSidebarRenderKey) return;
+  lastSidebarRenderKey = sidebarKey;
+
   const navHtml = `
     <div class="nav-item ${activeId === null ? 'active' : ''}" onclick="goDashboard()"><span class="nav-icon">${icon('home')}</span>Dashboard</div>
     <div class="nav-item ${activeId === 'analysis' ? 'active' : ''}" onclick="goAnalysis()"><span class="nav-icon">${icon('chart')}</span>Analysis</div>
@@ -2198,6 +2390,7 @@ function reelRenderKey(job) {
 
 function renderMain() {
   captureComposer();
+  mainInner.classList.toggle('corner-wide', activeId === 'corner');
   renderAgentDrawer();   // keeps the floating button / open drawer in step with the page (memoised inside)
   if (activeId === null) {
     renderDashboard();
@@ -3176,7 +3369,7 @@ window.sendAgentMessage = async function (source) {
   agentMessages.push({ role: 'user', content: text, created_at: new Date().toISOString() });
   agentComposerText = '';
   renderAgentAll(); scrollAgentToEnd();
-  const context = agentContextReelId() ? { reel_id: agentContextReelId() } : null;
+  const context = agentContextPayload();
   try {
     const res = await authedFetch('/api/agent/threads/' + agentThreadId + '/messages', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, context }),
@@ -3332,9 +3525,32 @@ function renderScriptCard(d) {
     </div>`;
 }
 
-// ---- the drawer: same conversation, any page, aware of the open reel ----
+// ---- the drawer: same conversation, any page, aware of the open reel or idea ----
 function agentContextReelId() {
   return activeId && activeId !== 'analysis' && activeId !== 'agent' && activeId !== 'script' && jobsById[activeId] ? activeId : null;
+}
+
+function agentContextIdea() {
+  return activeId === 'corner' && cornerIdeaId != null ? cornerIdeas[cornerIdeaId] || null : null;
+}
+
+function agentContextPayload() {
+  const reelId = agentContextReelId();
+  if (reelId) return { reel_id: reelId };
+  const idea = agentContextIdea();
+  if (!idea) return null;
+  return { idea_id: idea.id, draft: ideaDraftText(idea).slice(0, 12000), script: idea.script || {} };
+}
+
+function updateAgentFabForContext() {
+  const fab = document.getElementById('agent-fab');
+  if (!fab) return;
+  const idea = agentContextIdea();
+  fab.classList.toggle('idea-mode', !!idea);
+  fab.innerHTML = idea
+    ? `<span class="fab-title">✦ Draft copilot</span><span class="fab-note">${escapeHtml(ideaLocalCoach(idea))}</span>`
+    : '<span class="fab-title">✦ Ask agent</span>';
+  fab.title = idea ? 'Open a copilot that knows this draft' : 'Ask the agent';
 }
 
 function renderAgentAll() {
@@ -3362,18 +3578,24 @@ function renderAgentDrawer() {
   const loginView = document.getElementById('login-view');
   const signedOut = loginView && loginView.style.display !== 'none';
   fab.style.display = (activeId === 'agent' || signedOut) ? 'none' : '';
+  updateAgentFabForContext();
   if (!agentDrawerOpen || activeId === 'agent' || signedOut) { drawer.style.display = 'none'; lastAgentDrawerKey = null; return; }
   drawer.style.display = 'flex';
   // renderMain runs on every poll tick; only rebuild the drawer when something
   // it shows has changed, or the composer would lose what's being typed.
-  const key = JSON.stringify([agentContextReelId(), agentThreadId, agentMessages.length, agentSending, agentLive.length,
+  const contextIdea = agentContextIdea();
+  const key = JSON.stringify([agentContextReelId(), contextIdea?.id || null, agentThreadId, agentMessages.length, agentSending, agentLive.length,
     agentError || '', (agentThreads || []).length, agentMessages.length ? agentMessages[agentMessages.length - 1].id || '' : '']);
   if (key === lastAgentDrawerKey) return;
   lastAgentDrawerKey = key;
   const ctxId = agentContextReelId();
   const ctxJob = ctxId ? jobsById[ctxId] : null;
-  const ctxLabel = ctxJob ? (ctxJob.meta?.username ? '@' + ctxJob.meta.username : ctxId) : null;
-  const quick = ctxJob ? [
+  const ctxLabel = contextIdea ? (contextIdea.title || 'Untitled draft') : (ctxJob ? (ctxJob.meta?.username ? '@' + ctxJob.meta.username : ctxId) : null);
+  const quick = contextIdea ? [
+    ['Sharpen only the hook', 'Read this draft and give me 3 sharper hook options. Keep my voice and answer in one short pass without library research.'],
+    ['Find the missing beat', 'What is the one missing or weak beat in this draft? Be specific and concise. Do not rewrite the whole script.'],
+    ['Tighten without flattening it', 'Tighten this draft while preserving my wording and personality. Show only the changed lines and why.'],
+  ] : ctxJob ? [
     ['Why did this reel do what it did?', 'Why did this reel do what it did? Numbers first.'],
     ['Write a reel like this, in my voice', 'Write a reel that uses what worked in this one, in my voice. Script card format.'],
     ['What would you change?', 'What is the single most valuable change to this reel for next time?'],
@@ -3381,7 +3603,7 @@ function renderAgentDrawer() {
   const t = (agentThreads || []).find(x => x.id === agentThreadId);
   drawer.innerHTML = `
     <div class="ad-head">
-      <div class="ad-title">✦ Agent${ctxLabel ? ` <span class="chip on" title="The agent knows this reel is open">${escapeHtml(ctxLabel)}</span>` : ''}</div>
+      <div class="ad-title">✦ ${contextIdea ? 'Draft copilot' : 'Agent'}${ctxLabel ? ` <span class="chip on" title="The assistant knows what is open">${escapeHtml(ctxLabel)}</span>` : ''}</div>
       <div class="ad-actions">
         <button class="link-btn" onclick="agentDrawerNewThread()" title="Start a fresh conversation">New</button>
         <button class="link-btn" onclick="goAgent(); toggleAgentDrawer(false)" title="Open the full Agent page">Expand</button>
@@ -3389,13 +3611,14 @@ function renderAgentDrawer() {
       </div>
     </div>
     ${t ? `<div class="ad-thread">${escapeHtml(t.title || 'New conversation')}</div>` : ''}
+    ${contextIdea ? '<div class="ad-quiet-note">No background chat calls. It uses the current draft only when you press Send; start a New chat when you want a clean, lower-context turn.</div>' : ''}
     <div class="agent-scroll ad-scroll" id="agent-drawer-scroll">
       ${!agentMessages.length && !agentSending ? `<div class="agent-empty"><div class="chip-flow">${quick.map(([label, text]) => `<span class="chip" style="cursor:pointer" onclick="useDrawerStarter(${JSON.stringify(text).replace(/"/g, '&quot;')})">${escapeHtml(label)}</span>`).join('')}</div></div>` : ''}
       <div id="agent-drawer-stream">${agentMessages.map(renderAgentMessage).join('')}${renderAgentLive()}</div>
     </div>
     ${agentError ? `<div class="error-box" style="margin:6px 0">${escapeHtml(agentError)}</div>` : ''}
     <div class="agent-composer">
-      <textarea id="agent-drawer-input" rows="2" placeholder="${ctxLabel ? 'Ask about this reel, or anything else…' : 'Ask about a reel, a pattern, or say: draft a reel about…'}" onkeydown="if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendAgentMessage('drawer'); }" oninput="agentComposerText = this.value">${escapeHtml(agentComposerText)}</textarea>
+      <textarea id="agent-drawer-input" rows="2" placeholder="${contextIdea ? 'Ask about this draft…' : (ctxLabel ? 'Ask about this reel, or anything else…' : 'Ask about a reel, a pattern, or say: draft a reel about…')}" onkeydown="if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendAgentMessage('drawer'); }" oninput="agentComposerText = this.value">${escapeHtml(agentComposerText)}</textarea>
       <button class="primary" onclick="sendAgentMessage('drawer')" ${agentSending ? 'disabled' : ''}>${agentSending ? '…' : 'Send'}</button>
     </div>`;
   scrollAgentToEnd();
@@ -3452,13 +3675,16 @@ function renderAgentPage() {
 
 // ---------- Rate my script ----------
 // Paste a draft, get it rated / improved / rewritten against this project's
-// library. Stateless server side: the script and the three results live here
-// (and in localStorage per project) so a reload or a tab hop doesn't lose them.
+// library. The working editor stays in localStorage; every successful rating is
+// an immutable server-side snapshot so refreshes, devices and re-ratings keep a
+// real history.
 let rmsText = '', rmsTitle = '', rmsGoal = '', rmsTab = 'rate', rmsAngle = 'default', rmsDuration = '';
 let rmsRating = null, rmsImprove = null, rmsRewrite = null;
-let rmsRatedText = null;       // the exact script the current rating was computed for - anything else is "stale"
+let rmsRatedText = null, rmsRatedTitle = '', rmsRatedGoal = ''; // exact inputs for the visible rating
 let rmsBusy = null;            // 'rate' | 'improve' | 'rewrite' while a call is in flight
-let rmsError = null, rmsLoadedFor = undefined, rmsSaveTimer = null;
+let rmsError = null, rmsErrorTab = null, rmsLoadedFor = undefined, rmsRequestSeq = 0;
+let rmsHistory = [], rmsHistoryLoadedFor = undefined, rmsHistoryLoadingFor = undefined, rmsHistoryError = null;
+const rmsSaveTimers = new Map();
 const RMS_ANGLES = [
   ['default', 'Best shot'], ['shorter', 'Shorter (20-30s)'], ['contrarian', 'Contrarian lead'],
   ['story', 'Story-led'], ['listicle', 'Numbered beats'], ['sends', 'Built for sends'],
@@ -3468,22 +3694,55 @@ const RMS_WEIGHTS = { hook: 25, promise: 10, body: 20, cta: 15, clarity: 10, ret
 function rmsKey() { return 'rms:' + (activeProjectId == null ? 'none' : activeProjectId); }
 function rmsLoad() {
   if (rmsLoadedFor === activeProjectId) return;
+  rmsRequestSeq++; // any response started in the old project is now stale
   rmsLoadedFor = activeProjectId;
   let d = {};
   try { d = JSON.parse(localStorage.getItem(rmsKey()) || '{}') || {}; } catch (_) { d = {}; }
   rmsText = d.text || ''; rmsTitle = d.title || ''; rmsGoal = d.goal || '';
   rmsRating = d.rating || null; rmsImprove = d.improve || null; rmsRewrite = d.rewrite || null;
   rmsRatedText = d.ratedText || null; rmsTab = d.tab || 'rate'; rmsAngle = d.angle || 'default'; rmsDuration = d.duration || '';
-  rmsError = null;
+  rmsRatedTitle = d.ratedTitle ?? (rmsRatedText !== null ? rmsTitle.trim() : '');
+  rmsRatedGoal = d.ratedGoal ?? (rmsRatedText !== null ? rmsGoal.trim() : '');
+  if (!['rate', 'improve', 'rewrite', 'history'].includes(rmsTab)) rmsTab = 'rate';
+  rmsBusy = null; rmsError = null; rmsErrorTab = null;
+  rmsHistory = []; rmsHistoryLoadedFor = undefined; rmsHistoryError = null;
 }
 function rmsSave() {
-  clearTimeout(rmsSaveTimer);
-  rmsSaveTimer = setTimeout(() => {
+  // Capture both key and data now. The old implementation looked up the active
+  // project only when the debounce fired, which could save project A into B.
+  const key = rmsKey();
+  const snapshot = { text: rmsText, title: rmsTitle, goal: rmsGoal, rating: rmsRating, improve: rmsImprove,
+    rewrite: rmsRewrite, ratedText: rmsRatedText, ratedTitle: rmsRatedTitle, ratedGoal: rmsRatedGoal,
+    tab: rmsTab, angle: rmsAngle, duration: rmsDuration };
+  clearTimeout(rmsSaveTimers.get(key));
+  const timer = setTimeout(() => {
     try {
-      localStorage.setItem(rmsKey(), JSON.stringify({ text: rmsText, title: rmsTitle, goal: rmsGoal, rating: rmsRating, improve: rmsImprove,
-        rewrite: rmsRewrite, ratedText: rmsRatedText, tab: rmsTab, angle: rmsAngle, duration: rmsDuration }));
+      localStorage.setItem(key, JSON.stringify(snapshot));
     } catch (_) { /* quota / private mode - the page state still works */ }
+    rmsSaveTimers.delete(key);
   }, 250);
+  rmsSaveTimers.set(key, timer);
+}
+
+async function rmsLoadHistory(force = false) {
+  const projectId = activeProjectId;
+  if (projectId == null || (!force && rmsHistoryLoadedFor === projectId)) return;
+  if (rmsHistoryLoadingFor === projectId) return;
+  rmsHistoryLoadingFor = projectId; rmsHistoryError = null;
+  if (activeId === 'script') { renderRmsTabs(); renderRmsPane(); }
+  try {
+    const res = await authedFetch('/api/script/ratings?limit=100');
+    const data = await readJson(res, '/api/script/ratings');
+    if (!res.ok || data.error) throw new Error(data.error || `Could not load history (${res.status})`);
+    if (activeProjectId !== projectId) return;
+    rmsHistory = Array.isArray(data.ratings) ? data.ratings : [];
+    rmsHistoryLoadedFor = projectId;
+  } catch (e) {
+    if (activeProjectId === projectId) rmsHistoryError = e.message;
+  } finally {
+    if (rmsHistoryLoadingFor === projectId) rmsHistoryLoadingFor = undefined;
+    if (activeProjectId === projectId && activeId === 'script') { renderRmsTabs(); renderRmsPane(); }
+  }
 }
 
 window.goScript = function () {
@@ -3495,12 +3754,16 @@ window.goScript = function () {
 };
 
 function rmsWords(text) { return (text || '').trim() ? (text || '').trim().split(/\s+/).length : 0; }
-function rmsStale() { return !!(rmsRating && rmsRatedText !== null && rmsRatedText !== rmsText.trim()); }
+function rmsStale() {
+  return !!(rmsRating && rmsRatedText !== null && (rmsRatedText !== rmsText.trim()
+    || rmsRatedTitle !== rmsTitle.trim() || rmsRatedGoal !== rmsGoal.trim()));
+}
 function rmsBand(score10) { return score10 == null ? '' : score10 < 4.5 ? 'weak' : score10 < 6.5 ? 'ok' : score10 < 8 ? 'good' : 'strong'; }
 
 function renderScriptStudio() {
   lastReelRenderKey = null;
   rmsLoad();
+  rmsLoadHistory();
   // Re-renders happen on every poll tick; rebuilding the textarea would eat the
   // caret, so once the page is up only the right-hand pane is redrawn.
   if (document.getElementById('rms-root')) { renderRmsTabs(); renderRmsPane(); renderRmsMeta(); return; }
@@ -3514,10 +3777,10 @@ function renderScriptStudio() {
     </div>`;
   const editor = `
     <div class="rms-editor">
-      <input id="rms-title" placeholder="Title / topic (optional)" value="${escapeHtml(rmsTitle)}" oninput="rmsTitle = this.value; rmsSave()">
+      <input id="rms-title" placeholder="Title / topic (optional)" value="${escapeHtml(rmsTitle)}" oninput="rmsOnContextInput('title', this.value)">
       <textarea id="rms-text" placeholder="Paste your script here - hook, body, CTA. Labels like HOOK: / CTA: are fine but not needed." oninput="rmsOnInput(this.value)">${escapeHtml(rmsText)}</textarea>
       <div class="rms-meta" id="rms-meta"></div>
-      <input id="rms-goal" placeholder="Goal (optional): e.g. sends from founders, saves, follows" value="${escapeHtml(rmsGoal)}" oninput="rmsGoal = this.value; rmsSave()">
+      <input id="rms-goal" placeholder="Goal (optional): e.g. sends from founders, saves, follows" value="${escapeHtml(rmsGoal)}" oninput="rmsOnContextInput('goal', this.value)">
       <div class="rms-actions">
         <button class="primary" id="rms-rate-btn" onclick="rmsRun('rate')">Rate it</button>
         <button class="ghost" onclick="rmsRun('improve')" title="Suggest edits">Improve</button>
@@ -3539,43 +3802,113 @@ window.rmsOnInput = function (value) {
   if (stale) stale.style.display = rmsStale() ? '' : 'none';
 };
 
+window.rmsOnContextInput = function (field, value) {
+  if (field === 'title') rmsTitle = value;
+  else if (field === 'goal') rmsGoal = value;
+  rmsSave(); renderRmsMeta(); renderRmsTabs();
+  const stale = document.getElementById('rms-stale-note');
+  if (stale) stale.style.display = rmsStale() ? '' : 'none';
+};
+
 function renderRmsMeta() {
   const el = document.getElementById('rms-meta');
   if (!el) return;
   const w = rmsWords(rmsText);
   const secs = Math.round(w / 2.5);
   el.innerHTML = `<span>${w} words · ~${secs}s spoken</span>${rmsStale() ? '<span class="stale">changed since rated</span>' : ''}`;
+  const btn = document.getElementById('rms-rate-btn');
+  if (btn) btn.textContent = !rmsRating ? 'Rate it' : rmsStale() ? 'Rate this revision' : 'Rate again';
 }
 
-window.setRmsTab = function (tab) { rmsTab = tab; rmsSave(); renderRmsTabs(); renderRmsPane(); };
+window.setRmsTab = function (tab) {
+  rmsTab = tab; rmsError = null; rmsErrorTab = null; rmsSave();
+  if (tab === 'history') rmsLoadHistory();
+  renderRmsTabs(); renderRmsPane();
+};
 
 function renderRmsTabs() {
   const el = document.getElementById('rms-tabs');
   if (!el) return;
   const text = rmsText.trim();
   const dot = (has, stale) => has ? `<span class="rms-tab-dot ${stale ? 'stale' : ''}"></span>` : '';
-  const spin = (k) => rmsBusy === k ? '<span class="spin-xs"></span>' : '';
+  const spin = (k) => (rmsBusy === k || (k === 'history' && rmsHistoryLoadingFor === activeProjectId)) ? '<span class="spin-xs"></span>' : '';
   el.innerHTML = [
     ['rate', 'Rate', !!rmsRating, rmsStale()],
     ['improve', 'Improve', !!rmsImprove, !!(rmsImprove && rmsImprove.forText !== text)],
     ['rewrite', 'Rewrite', !!rmsRewrite, !!(rmsRewrite && rmsRewrite.forText !== text)],
+    ['history', `History${rmsHistory.length ? ` (${rmsHistory.length})` : ''}`, !!rmsHistory.length, false],
   ].map(([k, label, has, stale]) => `<div class="analysis-tab ${rmsTab === k ? 'active' : ''}" onclick="setRmsTab('${k}')">${label}${spin(k) || dot(has, stale)}</div>`).join('');
 }
 
 function renderRmsPane() {
   const el = document.getElementById('rms-pane');
   if (!el) return;
-  const err = rmsError ? `<div class="error-box" style="margin-bottom:14px">${escapeHtml(rmsError)}</div>` : '';
+  const err = rmsError && rmsErrorTab === rmsTab ? `<div class="error-box" style="margin-bottom:14px">${escapeHtml(rmsError)}
+    <div class="rms-error-actions"><button class="ghost" onclick="rmsRun('${rmsTab}')">Try again</button></div></div>` : '';
   if (rmsBusy === rmsTab) {
     const msg = { rate: 'Scoring it against the lever table, playbook and top reels…', improve: 'Working out the fewest edits with the biggest lift…', rewrite: 'Rebuilding it around what travels here…' }[rmsTab];
     el.innerHTML = `<div class="rms-busy"><span class="spin-sm" style="display:inline-block"></span>${msg}</div>`;
     return;
   }
-  el.innerHTML = err + (rmsTab === 'rate' ? renderRmsRate() : rmsTab === 'improve' ? renderRmsImprove() : renderRmsRewrite());
+  el.innerHTML = err + (rmsTab === 'rate' ? renderRmsRate() : rmsTab === 'improve' ? renderRmsImprove()
+    : rmsTab === 'rewrite' ? renderRmsRewrite() : renderRmsHistory());
 }
 
+function rmsDeltaHtml(delta) {
+  if (delta == null || Number.isNaN(Number(delta))) return '';
+  const n = Number(delta); const cls = n > 0 ? 'up' : n < 0 ? 'down' : 'flat';
+  return `<span class="rms-delta ${cls}" title="Score change from the linked previous rating">${n > 0 ? '+' : ''}${n}</span>`;
+}
+
+function renderRmsHistory() {
+  const loading = rmsHistoryLoadingFor === activeProjectId;
+  if (rmsHistoryError) {
+    return `<div class="error-box">${escapeHtml(rmsHistoryError)}<div class="rms-error-actions"><button class="ghost" onclick="rmsLoadHistory(true)">Try again</button></div></div>`;
+  }
+  if (loading && !rmsHistory.length) return '<div class="rms-busy"><span class="spin-sm" style="display:inline-block"></span>Loading saved ratings…</div>';
+  const legacy = rmsRating && !rmsRating.id ? `<div class="rms-box rms-legacy-note">The rating currently visible in <b>Rate</b> predates server history. It is still saved on this device; new ratings will be saved here permanently.</div>` : '';
+  if (!rmsHistory.length) {
+    return legacy + `<div class="rms-empty">No saved ratings yet. Your next successful rating will appear here, and every re-rating will be kept as another version.<br><button class="primary" onclick="setRmsTab('rate')">Rate a script</button></div>`;
+  }
+  const cards = rmsHistory.map(item => {
+    const r = item.rating || {}; const current = Number(rmsRating?.id) === Number(item.id);
+    const score = r.overall == null ? '—' : r.overall;
+    const excerpt = String(item.script || '').replace(/\s+/g, ' ').trim();
+    const title = item.title || excerpt.slice(0, 72) || 'Untitled script';
+    const words = r.word_count || rmsWords(item.script);
+    return `<div class="rms-history-card ${current ? 'current' : ''}">
+      <div><div class="rms-history-score">${escapeHtml(String(score))}<small>/100</small></div>${rmsDeltaHtml(r.score_delta)}</div>
+      <div>
+        <div class="rms-history-title">${escapeHtml(title)}</div>
+        <div class="rms-history-meta"><span>${relTime(item.created_at || r.rated_at)}</span><span>${words} words</span>${item.model || r.model ? `<span>${escapeHtml(item.model || r.model)}</span>` : ''}${item.previous_rating_id ? '<span>edited re-rating</span>' : ''}</div>
+        ${excerpt ? `<div class="rms-history-excerpt">${escapeHtml(excerpt)}</div>` : ''}
+        ${r.revision_summary ? `<div class="rms-history-revision">${agentMd(r.revision_summary)}</div>` : ''}
+      </div>
+      <div class="rms-history-actions"><button class="${current ? 'ghost' : 'primary'}" onclick="rmsOpenHistory(${Number(item.id)})" ${current ? 'disabled' : ''}>${current ? 'Loaded' : 'Open version'}</button></div>
+    </div>`;
+  }).join('');
+  return `${legacy}<div class="rms-history-head"><div><h2>Rating history</h2><div class="pb-sub">Every result is an immutable script snapshot. Edited re-ratings show their score change.</div></div><button class="ghost" onclick="rmsLoadHistory(true)" ${loading ? 'disabled' : ''}>${loading ? 'Refreshing…' : 'Refresh'}</button></div><div class="rms-history-list">${cards}</div>`;
+}
+
+window.rmsOpenHistory = async function (id) {
+  const item = rmsHistory.find(x => Number(x.id) === Number(id));
+  if (!item) return;
+  const different = rmsText.trim() !== String(item.script || '').trim() || rmsTitle.trim() !== String(item.title || '').trim() || rmsGoal.trim() !== String(item.goal || '').trim();
+  const workingCopyOnly = rmsText.trim() && (!rmsRating || rmsStale() || !rmsRating.id);
+  if (different && workingCopyOnly && !await askForConfirm({ title: 'Open this saved version?', body: 'This replaces the unsaved working text in the editor. Your saved rating history will not be changed.', confirmText: 'Open version' })) return;
+  rmsText = item.script || ''; rmsTitle = item.title || ''; rmsGoal = item.goal || '';
+  rmsRating = { ...(item.rating || {}), id: item.id, previous_rating_id: item.previous_rating_id,
+    model: item.model || item.rating?.model, rated_at: item.created_at || item.rating?.rated_at };
+  rmsRatedText = rmsText.trim(); rmsRatedTitle = rmsTitle.trim(); rmsRatedGoal = rmsGoal.trim();
+  rmsImprove = null; rmsRewrite = null; rmsError = null; rmsErrorTab = null; rmsTab = 'rate';
+  rmsSave();
+  const root = document.getElementById('rms-root'); if (root) root.remove();
+  renderScriptStudio();
+};
+
 function rmsStaleNote() {
-  return `<div id="rms-stale-note" class="pb-sub" style="display:${rmsStale() ? '' : 'none'};color:var(--warn);margin-bottom:10px">The script changed since this was generated. <button class="link-btn" onclick="rmsRun('${rmsTab}')">Run again</button></div>`;
+  const action = rmsTab === 'rate' ? 'Rate this revision' : 'Run again';
+  return `<div id="rms-stale-note" class="pb-sub" style="display:${rmsStale() ? '' : 'none'};color:var(--warn);margin-bottom:10px">The script, title or goal changed since this was generated. <button class="link-btn" onclick="rmsRun('${rmsTab}')">${action}</button></div>`;
 }
 
 function rmsLeverChip(m) {
@@ -3604,15 +3937,17 @@ function renderRmsRate() {
   }).join('');
   const levers = (r.lever_matches || []);
   const withData = levers.filter(m => m.lift_reach != null).length;
+  const delta = rmsDeltaHtml(r.score_delta);
   return `
     ${rmsStaleNote()}
     <div class="rms-head">
       <div><div class="rms-big">${r.overall == null ? '—' : r.overall}<small>/100</small></div><span class="rms-band ${band}">${band}</span></div>
       <div style="flex:1;min-width:0">
         <div class="rms-verdict">${escapeHtml(r.verdict || '')}</div>
-        <div class="rms-headmeta"><span>${r.word_count || rmsWords(rmsRatedText)} words · ~${r.estimated_duration_sec || '?'}s</span>${r.model ? `<span>· ${escapeHtml(r.model)}</span>` : ''}<span>· ${relTime(r.rated_at)}</span><button class="link-btn" onclick="rmsRun('rate')">Re-rate</button></div>
+        <div class="rms-headmeta"><span>${r.word_count || rmsWords(rmsRatedText)} words · ~${r.estimated_duration_sec || '?'}s</span>${r.model ? `<span>· ${escapeHtml(r.model)}</span>` : ''}<span>· ${relTime(r.rated_at)}</span>${delta}<button class="link-btn" onclick="rmsRun('rate')">${rmsStale() ? 'Rate this revision' : 'Rate again'}</button></div>
       </div>
     </div>
+    ${r.revision_summary ? `<div class="rms-h">Since the previous rating</div><div class="rms-box">${agentMd(r.revision_summary)}</div>` : ''}
     <div class="rms-h">Scores</div>
     <div class="rms-rows">${rows || '<div class="bulk-empty">No sub-scores came back.</div>'}</div>
     ${r.first_seconds ? `<div class="rms-h">First 3 seconds</div><div class="rms-box">${agentMd(r.first_seconds)}</div>` : ''}
@@ -3744,28 +4079,67 @@ function renderRmsRewrite() {
     </div>`;
 }
 
+async function rmsImportDeviceRating(rating, projectId) {
+  const res = await authedFetch('/api/script/ratings/import', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ script: rmsRatedText, title: rmsRatedTitle, goal: rmsRatedGoal, rating }) });
+  const data = await readJson(res, '/api/script/ratings/import');
+  if (!res.ok || data.error) throw new Error(data.error || `Could not save the previous rating (${res.status})`);
+  if (activeProjectId === projectId) {
+    const importedRating = { ...(data.rating || rating), id: data.id, previous_rating_id: null,
+      model: data.model || rating.model, rated_at: data.created_at || rating.rated_at };
+    rmsRating = importedRating;
+    rmsHistory = [data, ...rmsHistory.filter(x => Number(x.id) !== Number(data.id))];
+    rmsSave(); renderRmsTabs();
+  }
+  return data.id;
+}
+
 window.rmsRun = async function (kind) {
   const text = rmsText.trim();
   if (text.length < 20) { toast('Paste a script first - at least a couple of sentences.', 'error'); const ta = document.getElementById('rms-text'); if (ta) ta.focus(); return; }
   if (rmsBusy) { toast('Still working on the last request.', 'error'); return; }
-  rmsBusy = kind; rmsError = null; rmsTab = kind;
+  const projectAtStart = activeProjectId; const requestId = ++rmsRequestSeq;
+  const title = rmsTitle.trim(); const goal = rmsGoal.trim();
+  let previousRating = rmsRating; let previousRatingId = Number(previousRating?.id) || null;
+  const ratingMatchesInputs = !!(previousRating && rmsRatedText === text && rmsRatedTitle === title && rmsRatedGoal === goal);
+  rmsBusy = kind; rmsError = null; rmsErrorTab = null; rmsTab = kind;
   renderRmsTabs(); renderRmsPane();
   try {
-    const body = { script: text, title: rmsTitle, goal: rmsGoal };
-    if (kind !== 'rate' && rmsRating && rmsRatedText === text) body.rating = rmsRating;
+    // Preserve the one pre-history rating before comparing an edited revision to
+    // it. Older overwritten ratings cannot be reconstructed, but this one can.
+    if (kind === 'rate' && previousRating && !previousRatingId && (rmsRatedText || '').trim().length >= 20) {
+      previousRatingId = await rmsImportDeviceRating(previousRating, projectAtStart);
+      if (activeProjectId !== projectAtStart || requestId !== rmsRequestSeq) return;
+      previousRating = rmsRating;
+    }
+    const body = { script: text, title, goal };
+    if (kind === 'rate' && previousRatingId) body.previous_rating_id = previousRatingId;
+    if (kind !== 'rate' && ratingMatchesInputs) body.rating = previousRating;
     if (kind === 'rewrite') { body.angle = rmsAngle; if (rmsDuration) body.duration_target_sec = Number(rmsDuration); }
     const res = await authedFetch('/api/script/' + kind, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await readJson(res, '/api/script/' + kind);
     if (!res.ok || data.error) throw new Error(data.error || `Request failed (${res.status})`);
-    if (kind === 'rate') { rmsRating = data; rmsRatedText = text; }
+    if (activeProjectId !== projectAtStart || requestId !== rmsRequestSeq) return;
+    if (kind === 'rate') {
+      rmsRating = data; rmsRatedText = text; rmsRatedTitle = title; rmsRatedGoal = goal;
+      if (data.id) {
+        const item = { id: data.id, previous_rating_id: data.previous_rating_id, title, goal, script: text,
+          model: data.model, created_at: data.rated_at, rating: data };
+        rmsHistory = [item, ...rmsHistory.filter(x => Number(x.id) !== Number(data.id))];
+      }
+      if (data.history_warning) toast(data.history_warning, 'error');
+    }
     else if (kind === 'improve') rmsImprove = { ...data, forText: text };
     else rmsRewrite = { ...data, forText: text };
     rmsSave();
   } catch (e) {
-    rmsError = e.message;
+    if (activeProjectId === projectAtStart && requestId === rmsRequestSeq) { rmsError = e.message; rmsErrorTab = kind; }
+  } finally {
+    if (activeProjectId === projectAtStart && requestId === rmsRequestSeq) {
+      rmsBusy = null;
+      renderRmsTabs(); renderRmsPane(); renderRmsMeta();
+    }
   }
-  rmsBusy = null;
-  renderRmsTabs(); renderRmsPane(); renderRmsMeta();
 };
 
 window.rmsUse = function (text) {
@@ -3781,8 +4155,9 @@ window.rmsCopy = function (text) {
 };
 
 window.rmsClear = async function () {
-  if (rmsText.trim() && !await askForConfirm({ title: 'Clear this script?', body: 'The script and its rating, edits and rewrite are removed from this page.', confirmText: 'Clear' })) return;
-  rmsText = ''; rmsTitle = ''; rmsGoal = ''; rmsRating = null; rmsImprove = null; rmsRewrite = null; rmsRatedText = null; rmsError = null; rmsTab = 'rate';
+  if (rmsText.trim() && !await askForConfirm({ title: 'Clear this working script?', body: 'The editor and its current results are cleared. Saved rating history stays available.', confirmText: 'Clear' })) return;
+  rmsText = ''; rmsTitle = ''; rmsGoal = ''; rmsRating = null; rmsImprove = null; rmsRewrite = null;
+  rmsRatedText = null; rmsRatedTitle = ''; rmsRatedGoal = ''; rmsError = null; rmsErrorTab = null; rmsTab = 'rate';
   rmsSave();
   const root = document.getElementById('rms-root'); if (root) root.remove();
   renderScriptStudio();
@@ -3811,46 +4186,113 @@ const CORNER_COLUMNS = [
   { key: 'posted', label: 'Posted', icon: 'rocket' },
 ];
 const STICKY_COLORS = ['yellow', 'orange', 'pink', 'green', 'blue', 'purple'];
+const IDEA_PARTS = ['hook', 'promise', 'validation', 'cta'];
+const IDEA_AUTO_KEY = 'reel-transcriber:corner-auto-structure';
 const cornerIdeas = {};      // id -> idea
 let cornerIdeaId = null;     // open card, null = board
 let cornerSearch = '';
+let cornerCaptureDraft = '';
 let cornerLoaded = false;
+let cornerLoadedAt = 0;
+let cornerLoadPromise = null;
+let cornerLoadProjectId = null;
 let cornerRenderKey = null;  // null forces the next renderCornerPage() to rebuild
 let draggingIdeaId = null;
-let ideaSaveTimer = null;
+let cornerJustDragged = false;
+let cornerCreateBusy = false;
+let cornerSearchTimer = null;
+let cornerAutoOrganizeOnOpenId = null;
+let ideaAutoStructureEnabled = localStorage.getItem(IDEA_AUTO_KEY) !== 'off';
+const ideaSaveTimers = new Map();
+const ideaPendingPatches = new Map();
+const ideaSaveInFlight = new Map();
+const ideaAiTimers = new Map();
+const ideaAiInFlight = new Set();
+const ideaAiBlocked = new Set();
+const ideaAiState = new Map();
+const ideaLastOrganized = new Map();
+const ideaManualParts = new Map();
+const ideaAutoParts = new Map();
 
 window.goCorner = async function () {
+  if (cornerIdeaId != null) flushIdeaSave(cornerIdeaId);
   activeId = 'corner';
   cornerIdeaId = null;
   cornerRenderKey = null;
   lastReelRenderKey = null;
   renderSidebar();
   renderMain();
-  await refreshCornerIdeas();
-  if (activeId === 'corner') { cornerRenderKey = null; renderMain(); }
+  // Cached cards paint immediately. Refresh stale data behind that paint so a
+  // return visit never waits on the database just to show the board again.
+  if (!cornerLoaded || Date.now() - cornerLoadedAt > 60000) {
+    await refreshCornerIdeas();
+    if (activeId === 'corner' && cornerIdeaId == null) { cornerRenderKey = null; renderMain(); }
+  }
 };
 
 async function refreshCornerIdeas() {
+  const projectAtStart = activeProjectId;
+  if (cornerLoadPromise && cornerLoadProjectId === projectAtStart) return cornerLoadPromise;
+  const load = (async () => {
+    try {
+      const res = await authedFetch('/api/ideas');
+      const items = await readJson(res, '/api/ideas');
+      if (!res.ok) throw new Error(items.error || 'Could not load ideas');
+      // A slow response from the previous project must never repaint this one.
+      if (activeProjectId !== projectAtStart) return;
+      const serverIds = new Set(items.map(i => String(i.id)));
+      Object.keys(cornerIdeas).forEach(k => {
+        if (!serverIds.has(String(k)) && !ideaPendingPatches.has(Number(k)) && !ideaSaveInFlight.has(Number(k))) delete cornerIdeas[k];
+      });
+      items.forEach(i => {
+        const local = cornerIdeas[i.id];
+        const dirty = ideaPendingPatches.has(i.id) || ideaSaveInFlight.has(i.id);
+        cornerIdeas[i.id] = dirty && local ? { ...i, ...local } : i;
+      });
+      cornerLoaded = true;
+      cornerLoadedAt = Date.now();
+    } catch (e) {
+      if (activeProjectId === projectAtStart) toast(e.message, 'error');
+    }
+  })();
+  cornerLoadPromise = load;
+  cornerLoadProjectId = projectAtStart;
   try {
-    const res = await authedFetch('/api/ideas');
-    const items = await readJson(res, '/api/ideas');
-    if (!res.ok) throw new Error(items.error || 'Could not load ideas');
-    Object.keys(cornerIdeas).forEach(k => delete cornerIdeas[k]);
-    items.forEach(i => { cornerIdeas[i.id] = i; });
-    cornerLoaded = true;
-  } catch (e) {
-    toast(e.message, 'error');
+    return await load;
+  } finally {
+    if (cornerLoadPromise === load) { cornerLoadPromise = null; cornerLoadProjectId = null; }
   }
+}
+
+function ideaDraftText(idea) {
+  if ((idea.notes || '').trim()) return idea.notes;
+  if ((idea.script?.full || '').trim()) return idea.script.full;
+  return '';
 }
 
 function ideaScriptText(idea) {
   const s = idea.script || {};
-  return (s.full || '').trim() ? s.full : [s.hook, s.promise, s.validation, s.cta].filter(Boolean).join(' ');
+  const draft = ideaDraftText(idea);
+  return draft.trim() ? draft : [s.hook, s.promise, s.validation, s.cta].filter(Boolean).join('\n');
 }
 
 function ideaSpokenSecs(idea) {
   const w = rmsWords(ideaScriptText(idea));
   return w ? Math.round(w / 2.5) : 0; // same pace Rate my script assumes
+}
+
+function ideaFilledParts(idea) {
+  return IDEA_PARTS.filter(k => (idea.script?.[k] || '').trim()).length;
+}
+
+function ideaLocalCoach(idea) {
+  const words = rmsWords(ideaScriptText(idea));
+  const filled = ideaFilledParts(idea);
+  if (words < 12) return 'Write freely — I’ll stay quiet';
+  if (!filled) return 'Ready to map your draft';
+  if (!(idea.script?.hook || '').trim()) return 'Your opening still needs a hook';
+  if (!(idea.script?.cta || '').trim()) return `${filled}/4 parts mapped · CTA is open`;
+  return `${words} words · about ${ideaSpokenSecs(idea)}s`;
 }
 
 function cornerColumnIdeas(status) {
@@ -3865,17 +4307,22 @@ function cornerColumnIdeas(status) {
 function ideaCardHtml(idea) {
   const snippet = idea.notes || ideaScriptText(idea);
   const secs = ideaSpokenSecs(idea);
+  const filled = ideaFilledParts(idea);
   const tags = (idea.tags || []).slice(0, 3).map(t => `<span class="idea-tag">${escapeHtml(t)}</span>`).join('');
   const refs = (idea.refs || []).length ? `<span class="idea-k" title="Linked reference reels">${(idea.refs || []).length} reel${(idea.refs || []).length === 1 ? '' : 's'}</span>` : '';
+  const progress = { idea: 12, scripting: Math.max(32, filled * 18), ready: 84, posted: 100 }[idea.status] || 12;
+  const next = idea.status === 'idea' ? 'Open and shape it' : idea.status === 'scripting' ? `${filled}/4 parts mapped` : idea.status === 'ready' ? 'Ready to record' : 'Published';
   return `
-    <div class="idea-card sticky-${idea.color || 'yellow'}" draggable="true" data-idea-id="${idea.id}" onclick="openIdea(${idea.id})">
+    <button type="button" class="idea-card sticky-${idea.color || 'yellow'}" draggable="true" data-idea-id="${idea.id}" onclick="openIdea(${idea.id})">
       <div class="idea-title ${idea.title ? '' : 'untitled'}">${idea.title ? escapeHtml(idea.title) : 'Untitled idea'}</div>
-      ${snippet ? `<div class="idea-snippet">${escapeHtml(snippet)}</div>` : ''}
+      ${snippet ? `<div class="idea-snippet">${escapeHtml(snippet.slice(0, 320))}</div>` : ''}
+      <div class="idea-progress" aria-hidden="true"><i style="width:${progress}%"></i></div>
       <div class="idea-foot">
         ${tags}${refs}${secs ? `<span class="idea-k">~${secs}s</span>` : ''}
+        <span class="idea-next">${next}</span>
         <span class="idea-when">${relTime(idea.updated_at || idea.created_at)}</span>
       </div>
-    </div>`;
+    </button>`;
 }
 
 function renderCornerPage() {
@@ -3888,6 +4335,9 @@ function renderCornerPage() {
 
 function renderCornerBoard() {
   const proj = activeProject() || {};
+  const all = Object.values(cornerIdeas);
+  const activeCount = all.filter(i => i.status === 'scripting').length;
+  const readyCount = all.filter(i => i.status === 'ready').length;
   const colsHtml = CORNER_COLUMNS.map(col => {
     const cards = cornerColumnIdeas(col.key);
     return `
@@ -3901,61 +4351,186 @@ function renderCornerBoard() {
   }).join('');
 
   mainInner.innerHTML = `
-    <div class="dash-header">
+    <div class="corner-hero">
       <div>
+        <div class="eyebrow">Content workspace</div>
         <h1>Creative Corner</h1>
-        <div class="sub">Your own ideas and scripts for ${escapeHtml(proj.name || 'this project')} — from first spark to posted reel. Cards autosave; drag them along as they mature.</div>
+        <div class="sub">Capture a thought or paste a complete script for ${escapeHtml(proj.name || 'this project')}. Write naturally; the structure can sort itself out.</div>
       </div>
     </div>
-    <div class="corner-tools">
-      <input class="corner-capture" id="corner-capture" placeholder="Jot an idea and hit Enter…">
-      <input class="corner-search" id="corner-search" placeholder="Search cards…" value="${escapeHtml(cornerSearch)}">
+    <div class="corner-capture-panel">
+      <textarea id="corner-capture" rows="2" placeholder="Drop an idea, rough notes, or paste a full script…">${escapeHtml(cornerCaptureDraft)}</textarea>
+      <div class="corner-capture-actions">
+        <span class="hint">${isMacLike() ? '⌘' : 'Ctrl'} + Enter</span>
+        <button class="primary" id="corner-create" ${cornerCaptureDraft.trim() && !cornerCreateBusy ? '' : 'disabled'}>${cornerCreateBusy ? 'Creating…' : 'Create card'}</button>
+      </div>
+    </div>
+    <div class="corner-toolbar">
+      <div class="corner-summary">
+        <span class="corner-stat"><b>${all.length}</b> total</span>
+        <span class="corner-stat"><b>${activeCount}</b> writing</span>
+        <span class="corner-stat"><b>${readyCount}</b> ready</span>
+      </div>
+      <span class="spacer"></span>
+      <input class="corner-search" id="corner-search" aria-label="Search Creative Corner" placeholder="Search ideas and scripts…" value="${escapeHtml(cornerSearch)}">
+      <div class="corner-export-actions">
+        <button class="ghost" id="corner-download-csv" ${all.length ? '' : 'disabled'} title="Download every card in this project's board">Download CSV</button>
+        <button class="ghost" id="corner-share-csv" ${all.length ? '' : 'disabled'} title="Share the board as a CSV file">${icon('send')} Share CSV</button>
+      </div>
     </div>
     <div class="corner-board" id="corner-root">${colsHtml}</div>`;
 
-  document.getElementById('corner-capture').addEventListener('keydown', async (e) => {
-    const el = e.target;
-    if (e.key !== 'Enter' || !el.value.trim()) return;
-    const title = el.value.trim();
-    el.value = '';
-    try {
-      const res = await authedFetch('/api/ideas', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title }),
-      });
-      const idea = await readJson(res, '/api/ideas');
-      if (!res.ok) throw new Error(idea.error || 'Could not save the idea');
-      cornerIdeas[idea.id] = idea;
-      cornerRenderKey = null;
-      renderCornerBoard();
-      document.getElementById('corner-capture').focus();
-    } catch (err) {
-      toast(err.message, 'error');
-    }
+  const capture = document.getElementById('corner-capture');
+  capture.addEventListener('input', (e) => {
+    cornerCaptureDraft = e.target.value;
+    document.getElementById('corner-create').disabled = !cornerCaptureDraft.trim() || cornerCreateBusy;
   });
+  capture.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); createCornerIdea(); }
+  });
+  document.getElementById('corner-create').addEventListener('click', createCornerIdea);
+  document.getElementById('corner-download-csv').addEventListener('click', downloadCornerCsv);
+  document.getElementById('corner-share-csv').addEventListener('click', shareCornerCsv);
 
   document.getElementById('corner-search').addEventListener('input', (e) => {
     cornerSearch = e.target.value;
     const pos = e.target.selectionStart;
-    cornerRenderKey = null;
-    renderCornerBoard();
-    const s = document.getElementById('corner-search');
-    s.focus();
-    s.setSelectionRange(pos, pos);
+    clearTimeout(cornerSearchTimer);
+    cornerSearchTimer = setTimeout(() => {
+      cornerRenderKey = null;
+      renderCornerBoard();
+      const s = document.getElementById('corner-search');
+      if (s) { s.focus(); s.setSelectionRange(pos, pos); }
+    }, 100);
   });
 
   bindCornerDragAndDrop();
+}
+
+function cornerCsvCell(value) {
+  let text = value == null ? '' : String(value);
+  // A creator's draft is untrusted spreadsheet input. Neutralize formula-like
+  // prefixes before Excel or Sheets gets a chance to interpret them.
+  if (/^[\t\r ]*[=+\-@]/.test(text)) text = "'" + text;
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function cornerCsvFile() {
+  const stageNames = Object.fromEntries(CORNER_COLUMNS.map(c => [c.key, c.label]));
+  const stageOrder = Object.fromEntries(CORNER_COLUMNS.map((c, i) => [c.key, i]));
+  const ideas = Object.values(cornerIdeas).sort((a, b) =>
+    (stageOrder[a.status] ?? 99) - (stageOrder[b.status] ?? 99) ||
+    (a.ord ?? 0) - (b.ord ?? 0) ||
+    String(a.title || '').localeCompare(String(b.title || '')));
+  const headers = ['Title', 'Stage', 'Draft', 'Hook', 'Promise', 'Validation', 'CTA', 'Tags',
+    'Estimated seconds', 'Reference reels', 'Card color', 'Created at', 'Updated at'];
+  const rows = ideas.map(idea => {
+    const script = idea.script || {};
+    const refs = (idea.refs || []).map(id => jobsById[id]?.url || id).join(' | ');
+    return [idea.title, stageNames[idea.status] || idea.status, ideaDraftText(idea), script.hook,
+      script.promise, script.validation, script.cta, (idea.tags || []).join(' | '),
+      ideaSpokenSecs(idea) || '', refs, idea.color, idea.created_at, idea.updated_at];
+  });
+  const csv = [headers, ...rows].map(row => row.map(cornerCsvCell).join(',')).join('\r\n');
+  const slug = ((activeProject() || {}).name || 'creative-corner')
+    .replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').toLowerCase() || 'creative-corner';
+  const filename = `${slug}_creative_corner.csv`;
+  const blob = new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8' });
+  return { blob, filename };
+}
+
+function saveBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function downloadCornerCsv() {
+  const count = Object.keys(cornerIdeas).length;
+  if (!count) return;
+  const { blob, filename } = cornerCsvFile();
+  saveBlob(blob, filename);
+  toast(`Downloaded ${count} Creative Corner card${count === 1 ? '' : 's'}.`);
+}
+
+async function shareCornerCsv() {
+  if (!Object.keys(cornerIdeas).length) return;
+  const { blob, filename } = cornerCsvFile();
+  let file = null;
+  try { file = new File([blob], filename, { type: 'text/csv' }); } catch (_) { /* older webviews */ }
+  let canShareFile = false;
+  try { canShareFile = !!(file && navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))); } catch (_) { /* fall back below */ }
+  if (canShareFile) {
+    try {
+      await navigator.share({ title: 'Creative Corner board', text: `${(activeProject() || {}).name || 'Creative Corner'} scripting board`, files: [file] });
+      return;
+    } catch (e) {
+      if (e?.name === 'AbortError') return;
+    }
+  }
+  saveBlob(blob, filename);
+  toast('File sharing is not available here, so the CSV was downloaded instead.');
+}
+
+function isMacLike() { return /Mac|iPhone|iPad/.test(navigator.platform || ''); }
+
+async function createCornerIdea() {
+  const raw = cornerCaptureDraft.trim();
+  if (!raw || cornerCreateBusy) return;
+  cornerCreateBusy = true;
+  const btn = document.getElementById('corner-create');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating…'; }
+  const lines = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  const looksLikeScript = lines.length > 1 || raw.length > 96 || rmsWords(raw) >= 18;
+  let title = lines[0] || 'Untitled idea';
+  title = title.replace(/^\s*(?:#{1,4}\s*)?(?:hook|idea|title)\s*[:\-–—]\s*/i, '').trim() || 'Untitled idea';
+  title = title.slice(0, 96);
+  try {
+    const res = await authedFetch('/api/ideas', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, notes: looksLikeScript ? raw : '', status: looksLikeScript ? 'scripting' : 'idea' }),
+    });
+    const idea = await readJson(res, '/api/ideas');
+    if (!res.ok) throw new Error(idea.error || 'Could not save the idea');
+    cornerIdeas[idea.id] = idea;
+    cornerCaptureDraft = '';
+    cornerLoaded = true;
+    cornerLoadedAt = Date.now();
+    if (looksLikeScript) {
+      cornerAutoOrganizeOnOpenId = idea.id;
+      openIdea(idea.id);
+    } else {
+      cornerRenderKey = null;
+      renderCornerBoard();
+      document.getElementById('corner-capture')?.focus();
+    }
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    cornerCreateBusy = false;
+    if (activeId === 'corner' && cornerIdeaId == null) {
+      const liveBtn = document.getElementById('corner-create');
+      if (liveBtn) { liveBtn.disabled = !cornerCaptureDraft.trim(); liveBtn.textContent = 'Create card'; }
+    }
+  }
 }
 
 function bindCornerDragAndDrop() {
   mainInner.querySelectorAll('.idea-card').forEach(card => {
     card.addEventListener('dragstart', () => {
       draggingIdeaId = Number(card.dataset.ideaId);
+      cornerJustDragged = true;
       requestAnimationFrame(() => card.classList.add('dragging'));
     });
     card.addEventListener('dragend', () => {
       draggingIdeaId = null;
       card.classList.remove('dragging');
+      setTimeout(() => { cornerJustDragged = false; }, 80);
     });
   });
 
@@ -3967,6 +4542,7 @@ function bindCornerDragAndDrop() {
       col.classList.remove('drag-over');
       const idea = cornerIdeas[draggingIdeaId];
       if (!idea) return;
+      const previous = { status: idea.status, ord: idea.ord };
 
       // Insertion point: first card whose midline the pointer is above.
       const status = col.dataset.status;
@@ -3987,17 +4563,25 @@ function bindCornerDragAndDrop() {
 
       idea.status = status;
       idea.ord = ord;
+      setTimeout(() => { cornerJustDragged = false; }, 80);
       cornerRenderKey = null;
       renderCornerBoard();
       authedFetch('/api/ideas/positions', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ positions: [{ id: idea.id, status, ord }] }),
-      }).catch(() => toast('Could not save the move.', 'error'));
+      }).then(async res => {
+        if (!res.ok) throw new Error((await readJson(res, '/api/ideas/positions')).error || 'move failed');
+      }).catch(() => {
+        idea.status = previous.status; idea.ord = previous.ord;
+        cornerRenderKey = null; renderCornerBoard();
+        toast('Could not save the move. It has been put back.', 'error');
+      });
     });
   });
 }
 
 window.openIdea = function (id) {
+  if (cornerJustDragged) return;
   activeId = 'corner';
   cornerIdeaId = id;
   cornerRenderKey = null;
@@ -4006,42 +4590,73 @@ window.openIdea = function (id) {
 };
 
 window.closeIdea = function () {
+  if (cornerIdeaId != null) flushIdeaSave(cornerIdeaId);
   cornerIdeaId = null;
   cornerRenderKey = null;
   renderSidebar();
   renderMain();
 };
 
-function ideaEditableFields(idea) {
-  return { title: idea.title, notes: idea.notes, status: idea.status, color: idea.color,
-           tags: idea.tags || [], script: idea.script || {}, refs: idea.refs || [] };
+function setIdeaSaveState(id, text, state = '') {
+  if (cornerIdeaId !== id) return;
+  const el = document.getElementById('idea-save-state');
+  if (!el) return;
+  el.textContent = text;
+  el.classList.toggle('saved', state === 'saved');
+  el.classList.toggle('error', state === 'error');
 }
 
-function scheduleIdeaSave(idea) {
-  const stateEl = document.getElementById('idea-save-state');
-  if (stateEl) { stateEl.textContent = 'saving…'; stateEl.classList.remove('saved'); }
-  clearTimeout(ideaSaveTimer);
-  ideaSaveTimer = setTimeout(async () => {
-    const el = document.getElementById('idea-save-state');
+function scheduleIdeaSave(idea, patch) {
+  ideaPendingPatches.set(idea.id, { ...(ideaPendingPatches.get(idea.id) || {}), ...patch });
+  setIdeaSaveState(idea.id, 'saved locally · syncing');
+  clearTimeout(ideaSaveTimers.get(idea.id));
+  ideaSaveTimers.set(idea.id, setTimeout(() => flushIdeaSave(idea.id), 900));
+}
+
+async function flushIdeaSave(id) {
+  clearTimeout(ideaSaveTimers.get(id));
+  ideaSaveTimers.delete(id);
+  if (ideaSaveInFlight.has(id)) {
+    const saved = await ideaSaveInFlight.get(id);
+    return saved && ideaPendingPatches.has(id) ? flushIdeaSave(id) : saved;
+  }
+  const patch = ideaPendingPatches.get(id);
+  const idea = cornerIdeas[id];
+  if (!patch || !idea) return;
+  ideaPendingPatches.delete(id);
+  setIdeaSaveState(id, 'saving…');
+  const request = (async () => {
+    let failed = false;
     try {
-      const res = await authedFetch('/api/ideas/' + idea.id, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(ideaEditableFields(idea)),
+      const res = await authedFetch('/api/ideas/' + id, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
       });
-      const saved = await readJson(res, '/api/ideas');
+      const saved = await readJson(res, '/api/ideas/' + id);
       if (!res.ok) throw new Error(saved.error || 'save failed');
       idea.updated_at = saved.updated_at;
-      if (el) { el.textContent = 'saved ✓'; el.classList.add('saved'); }
+      setIdeaSaveState(id, ideaPendingPatches.has(id) ? 'saving…' : 'saved ✓', ideaPendingPatches.has(id) ? '' : 'saved');
     } catch (e) {
-      if (el) { el.textContent = 'save failed'; el.classList.remove('saved'); }
+      failed = true;
+      ideaPendingPatches.set(id, { ...patch, ...(ideaPendingPatches.get(id) || {}) });
+      setIdeaSaveState(id, 'save failed · edit to retry', 'error');
       toast('Could not save: ' + e.message, 'error');
+    } finally {
+      ideaSaveInFlight.delete(id);
+      if (!failed && ideaPendingPatches.has(id) && document.hasFocus()) {
+        clearTimeout(ideaSaveTimers.get(id));
+        ideaSaveTimers.set(id, setTimeout(() => flushIdeaSave(id), 120));
+      }
     }
-  }, 650);
+    return !failed;
+  })();
+  ideaSaveInFlight.set(id, request);
+  return request;
 }
 
 function renderIdeaEditor() {
   const idea = cornerIdeas[cornerIdeaId];
   if (!idea) { cornerIdeaId = null; cornerRenderKey = null; renderCornerBoard(); return; }
+  idea.script = { hook: '', promise: '', validation: '', cta: '', full: '', ...(idea.script || {}) };
 
   const scriptParts = [
     ['hook', 'Hook', 'The line that stops the scroll…'],
@@ -4060,82 +4675,130 @@ function renderIdeaEditor() {
     .map(j => `<option value="${j.id}">${escapeHtml(j.meta?.channel ? '@' + j.meta.channel : (j.meta?.uploader || j.id))} — ${escapeHtml((j.transcript || '').slice(0, 60))}</option>`)
     .join('');
 
+  const draft = ideaDraftText(idea);
+  const ai = ideaAiState.get(idea.id) || { state: 'idle', text: draft.trim() ? 'Watching locally for structure — no AI call yet.' : 'Start writing. Nothing runs until there is enough draft.' };
+  const filled = ideaFilledParts(idea);
+  const refCount = (idea.refs || []).length;
+
   mainInner.innerHTML = `
-    <div id="corner-root">
+    <div id="corner-root" class="idea-editor-shell">
     <div class="idea-editor-top">
       <button class="ghost" onclick="closeIdea()">${icon('arrowLeft')} Board</button>
+      <span class="idea-context">Writing workspace</span>
       <select id="idea-status">
         ${CORNER_COLUMNS.map(c => `<option value="${c.key}" ${idea.status === c.key ? 'selected' : ''}>${c.label}</option>`).join('')}
       </select>
       <div class="color-dots">
-        ${STICKY_COLORS.map(c => `<span class="color-dot sticky-${c} ${idea.color === c ? 'selected' : ''}" data-color="${c}" title="${c}"></span>`).join('')}
+        ${STICKY_COLORS.map(c => `<button type="button" class="color-dot sticky-${c} ${idea.color === c ? 'selected' : ''}" data-color="${c}" title="${c}" aria-label="Use ${c} card color"></button>`).join('')}
       </div>
       <div class="spacer"></div>
       <span class="idea-save-state" id="idea-save-state"></span>
-      <button class="ghost" style="color:var(--danger)" id="idea-delete">Delete</button>
+      <button class="ghost destructive" id="idea-delete">Delete</button>
     </div>
 
-    <input class="idea-title-input" id="idea-title" placeholder="Untitled idea" value="${escapeHtml(idea.title || '')}">
-    <div class="idea-meta-row">
-      <input class="idea-tags-input" id="idea-tags" placeholder="Tags, comma separated" value="${escapeHtml((idea.tags || []).join(', '))}">
-      <span class="hint">Created ${relTime(idea.created_at)}</span>
+    <div class="idea-editor-head">
+      <div>
+        <input class="idea-title-input" id="idea-title" aria-label="Idea title" placeholder="Untitled idea" value="${escapeHtml(idea.title || '')}">
+        <div class="idea-meta-row">
+          <input class="idea-tags-input" id="idea-tags" aria-label="Tags" placeholder="Add tags, separated by commas" value="${escapeHtml((idea.tags || []).join(', '))}">
+          <span class="hint">Created ${relTime(idea.created_at)}</span>
+        </div>
+      </div>
     </div>
 
     <div class="idea-editor-grid">
       <div>
-        <div class="idea-section-row"><div class="section-label">Brainstorm / notes</div></div>
-        <textarea class="idea-notes-area" id="idea-notes" placeholder="Rough thoughts, angles, references, anything…">${escapeHtml(idea.notes || '')}</textarea>
-
-        <div class="idea-section-row" style="margin-top:22px"><div class="section-label">Reference reels</div></div>
-        <div class="idea-refs" id="idea-refs"></div>
-        <div class="idea-ref-add">
-          <select id="idea-ref-add">
-            <option value="">＋ Link a transcribed reel…</option>
-            ${refOptions}
-          </select>
+        <div class="idea-workspace-card">
+          <div class="idea-workspace-head">
+            <div><div class="section-label">Draft workspace</div><div class="hint">Paste or write the whole thing here. Keep your flow; the outline updates beside you.</div></div>
+            <button class="link-btn" id="idea-copy-draft" ${draft.trim() ? '' : 'disabled'}>Copy</button>
+          </div>
+          <textarea class="idea-draft-area" id="idea-notes" aria-label="Draft workspace" spellcheck="true" placeholder="Start anywhere. A loose idea, opening line, bullet list, or full script all work…">${escapeHtml(draft)}</textarea>
+          <div class="idea-draft-footer">
+            <div class="idea-draft-metrics"><span id="idea-word-count">0 words</span><span id="idea-duration">—</span></div>
+            <span class="spacer"></span>
+            <span class="hint">Autosaves after you pause</span>
+          </div>
         </div>
+        <details class="idea-refs-panel" ${refCount ? 'open' : ''}>
+          <summary><span class="section-label">Reference reels</span><span class="hint">${refCount ? `${refCount} linked` : 'Optional'}</span></summary>
+          <div class="idea-refs" id="idea-refs"></div>
+          <div class="idea-ref-add">
+            <select id="idea-ref-add" aria-label="Link a transcribed reel">
+              <option value="">＋ Link a transcribed reel…</option>
+              ${refOptions}
+            </select>
+          </div>
+        </details>
       </div>
 
-      <div>
-        <div class="idea-section-row">
-          <div class="section-label">Script — hook / promise / validation / CTA</div>
-          <span class="idea-duration" id="idea-duration"></span>
+      <aside class="idea-structure-panel">
+        <div class="idea-structure-head">
+          <div><div class="section-label">Live structure</div><div class="hint">A map of your draft, not a second copy to maintain.</div></div>
+          <span class="idea-structure-count" id="idea-structure-count">${filled}/4 mapped</span>
+        </div>
+        <div class="idea-ai-strip">
+          <span class="idea-ai-mark">✦</span>
+          <div class="idea-ai-copy"><b>Quiet auto-structure</b><div class="idea-ai-status ${ai.state}" id="idea-ai-status">${escapeHtml(ai.text)}</div></div>
+          <button type="button" class="idea-auto-toggle" id="idea-auto-toggle" role="switch" aria-checked="${ideaAutoStructureEnabled}">${ideaAutoStructureEnabled ? 'Auto on' : 'Auto off'}</button>
+        </div>
+        <div class="idea-organize-row">
+          <span class="hint">Labels are mapped locally. Unlabelled drafts get one small AI call after an 8s pause, at most once per minute.</span>
+          <button class="ghost" id="idea-organize" ${draft.trim().length >= 80 && !ideaAiInFlight.has(idea.id) ? '' : 'disabled'}>Organize now</button>
         </div>
         ${scriptParts}
-        <div class="idea-section-row" style="margin-top:18px"><div class="section-label">Full script</div></div>
-        <textarea class="idea-full-area" data-script-part="full" placeholder="The final word-for-word script you'll record…">${escapeHtml(idea.script?.full || '')}</textarea>
-      </div>
+      </aside>
     </div>
     </div>`;
 
-  const updateDuration = () => {
-    const secs = ideaSpokenSecs(idea);
-    const w = rmsWords(ideaScriptText(idea));
-    document.getElementById('idea-duration').textContent = secs ? `${w} words · ~${secs}s spoken` : 'no script yet';
-  };
-  updateDuration();
+  updateIdeaEditorMetrics(idea);
+  setIdeaSaveState(idea.id, (ideaPendingPatches.has(idea.id) || ideaSaveInFlight.has(idea.id)) ? 'saving…' : 'saved ✓',
+    (ideaPendingPatches.has(idea.id) || ideaSaveInFlight.has(idea.id)) ? '' : 'saved');
+  const draftArea = document.getElementById('idea-notes');
+  const legacyFullOnly = !(idea.notes || '').trim() && (idea.script.full || '').trim();
+  fitIdeaDraftArea(draftArea);
 
-  document.getElementById('idea-title').addEventListener('input', (e) => { idea.title = e.target.value; scheduleIdeaSave(idea); });
-  document.getElementById('idea-notes').addEventListener('input', (e) => { idea.notes = e.target.value; scheduleIdeaSave(idea); });
+  document.getElementById('idea-title').addEventListener('input', (e) => { idea.title = e.target.value; scheduleIdeaSave(idea, { title: idea.title }); updateAgentFabForContext(); });
+  draftArea.addEventListener('input', (e) => {
+    idea.notes = e.target.value;
+    const patch = { notes: idea.notes };
+    if (legacyFullOnly && idea.script.full) { idea.script.full = ''; patch.script = { ...idea.script }; }
+    scheduleIdeaSave(idea, patch);
+    fitIdeaDraftArea(e.target);
+    updateIdeaEditorMetrics(idea);
+    handleIdeaDraftChanged(idea, { inputType: e.inputType || '' });
+  });
+  draftArea.addEventListener('paste', () => setTimeout(() => handleIdeaDraftChanged(idea, { pasted: true }), 0));
+  draftArea.addEventListener('blur', () => flushIdeaSave(idea.id));
   document.getElementById('idea-tags').addEventListener('input', (e) => {
     idea.tags = e.target.value.split(',').map(t => t.trim()).filter(Boolean);
-    scheduleIdeaSave(idea);
+    scheduleIdeaSave(idea, { tags: idea.tags });
   });
-  document.getElementById('idea-status').addEventListener('change', (e) => { idea.status = e.target.value; scheduleIdeaSave(idea); });
+  document.getElementById('idea-status').addEventListener('change', (e) => { idea.status = e.target.value; scheduleIdeaSave(idea, { status: idea.status }); });
   mainInner.querySelectorAll('.color-dot').forEach(dot => {
     dot.addEventListener('click', () => {
       idea.color = dot.dataset.color;
       mainInner.querySelectorAll('.color-dot').forEach(d => d.classList.toggle('selected', d === dot));
-      scheduleIdeaSave(idea);
+      scheduleIdeaSave(idea, { color: idea.color });
     });
   });
   mainInner.querySelectorAll('[data-script-part]').forEach(area => {
     area.addEventListener('input', () => {
-      idea.script = idea.script || {};
       idea.script[area.dataset.scriptPart] = area.value;
-      updateDuration();
-      scheduleIdeaSave(idea);
+      if (!ideaManualParts.has(idea.id)) ideaManualParts.set(idea.id, new Set());
+      ideaManualParts.get(idea.id).add(area.dataset.scriptPart);
+      ideaAutoParts.get(idea.id)?.delete(area.dataset.scriptPart);
+      updateIdeaEditorMetrics(idea);
+      scheduleIdeaSave(idea, { script: { ...idea.script } });
     });
+    area.addEventListener('blur', () => flushIdeaSave(idea.id));
+  });
+  document.getElementById('idea-auto-toggle').addEventListener('click', () => toggleIdeaAutoStructure(idea));
+  document.getElementById('idea-organize').addEventListener('click', () => organizeIdeaWithAi(idea, { manual: true }));
+  document.getElementById('idea-copy-draft').addEventListener('click', async () => {
+    if (!ideaDraftText(idea).trim()) return;
+    await navigator.clipboard.writeText(ideaDraftText(idea));
+    toast('Draft copied.');
   });
   document.getElementById('idea-delete').addEventListener('click', async () => {
     const ok = await askForConfirm({
@@ -4146,6 +4809,7 @@ function renderIdeaEditor() {
     try {
       const res = await authedFetch('/api/ideas/' + idea.id, { method: 'DELETE' });
       if (!res.ok) throw new Error((await readJson(res, '/api/ideas')).error || 'delete failed');
+      clearIdeaTransientState(idea.id);
       delete cornerIdeas[idea.id];
       closeIdea();
     } catch (e) {
@@ -4155,12 +4819,213 @@ function renderIdeaEditor() {
   document.getElementById('idea-ref-add').addEventListener('change', (e) => {
     if (!e.target.value) return;
     idea.refs = [...(idea.refs || []), e.target.value];
-    scheduleIdeaSave(idea);
+    scheduleIdeaSave(idea, { refs: idea.refs });
     cornerRenderKey = null;
     renderIdeaEditor();
   });
 
   renderIdeaRefChips(idea);
+  if (cornerAutoOrganizeOnOpenId === idea.id) {
+    cornerAutoOrganizeOnOpenId = null;
+    setTimeout(() => handleIdeaDraftChanged(idea, { pasted: true }), 250);
+  }
+}
+
+function fitIdeaDraftArea(el) {
+  if (!el) return;
+  const floor = window.matchMedia('(max-width: 640px)').matches ? 360 : 500;
+  el.style.height = 'auto';
+  el.style.height = Math.min(900, Math.max(floor, el.scrollHeight + 2)) + 'px';
+}
+
+function updateIdeaEditorMetrics(idea) {
+  const text = ideaScriptText(idea);
+  const words = rmsWords(text);
+  const secs = ideaSpokenSecs(idea);
+  const wordEl = document.getElementById('idea-word-count');
+  const durationEl = document.getElementById('idea-duration');
+  const countEl = document.getElementById('idea-structure-count');
+  if (wordEl) wordEl.textContent = `${words} word${words === 1 ? '' : 's'}`;
+  if (durationEl) durationEl.textContent = secs ? `about ${secs}s spoken` : 'no script yet';
+  if (countEl) countEl.textContent = `${ideaFilledParts(idea)}/4 mapped`;
+  updateAgentFabForContext();
+}
+
+function parseLabeledIdeaDraft(text) {
+  const buckets = { hook: [], promise: [], validation: [], cta: [] };
+  const aliases = { hook: 'hook', promise: 'promise', validation: 'validation', body: 'validation', main: 'validation', cta: 'cta', 'call to action': 'cta' };
+  const before = [];
+  let current = null;
+  let labels = 0;
+  for (const raw of text.split(/\r?\n/)) {
+    const m = raw.match(/^\s*(?:#{1,4}\s*)?(?:\[)?(hook|promise|validation|body|main|cta|call\s+to\s+action)(?:\])?(?:\s*[:\-–—]\s*(.*)|\s*)$/i);
+    if (m) {
+      current = aliases[m[1].toLowerCase().replace(/\s+/g, ' ')];
+      labels += 1;
+      if ((m[2] || '').trim()) buckets[current].push(m[2].trim());
+    } else if (current) {
+      buckets[current].push(raw);
+    } else if (raw.trim()) {
+      before.push(raw);
+    }
+  }
+  if (labels < 2) return null;
+  if (before.length) buckets.hook.unshift(...before);
+  return Object.fromEntries(IDEA_PARTS.map(k => [k, buckets[k].join('\n').trim()]));
+}
+
+function fastIdeaHash(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36) + ':' + text.length;
+}
+
+function ideaChangedChars(a, b) {
+  if (!a || !b) return Math.max((a || '').length, (b || '').length);
+  let start = 0;
+  while (start < a.length && start < b.length && a[start] === b[start]) start++;
+  let ae = a.length - 1, be = b.length - 1;
+  while (ae >= start && be >= start && a[ae] === b[be]) { ae--; be--; }
+  return Math.max(ae - start + 1, be - start + 1);
+}
+
+function setIdeaAiStatus(idea, state, text) {
+  ideaAiState.set(idea.id, { state, text });
+  if (cornerIdeaId !== idea.id) return;
+  const el = document.getElementById('idea-ai-status');
+  if (el) { el.className = `idea-ai-status ${state}`; el.textContent = text; }
+  const btn = document.getElementById('idea-organize');
+  if (btn) btn.disabled = ideaAiInFlight.has(idea.id) || ideaDraftText(idea).trim().length < 80;
+}
+
+function applyIdeaStructure(idea, structured, { manual = false, local = false } = {}) {
+  const manuallyEdited = ideaManualParts.get(idea.id) || new Set();
+  if (!ideaAutoParts.has(idea.id)) ideaAutoParts.set(idea.id, new Set());
+  const autoOwned = ideaAutoParts.get(idea.id);
+  let changed = false;
+  IDEA_PARTS.forEach(key => {
+    if (!Object.prototype.hasOwnProperty.call(structured || {}, key)) return;
+    const canApply = manual || (!manuallyEdited.has(key) && (!(idea.script[key] || '').trim() || autoOwned.has(key) || local));
+    if (!canApply) return;
+    const next = String(structured[key] || '');
+    if (idea.script[key] !== next) { idea.script[key] = next; changed = true; }
+    if (!manual) autoOwned.add(key);
+    const area = document.querySelector(`[data-script-part="${key}"]`);
+    if (area && document.activeElement !== area) area.value = next;
+  });
+  if (changed) scheduleIdeaSave(idea, { script: { ...idea.script } });
+  updateIdeaEditorMetrics(idea);
+  return changed;
+}
+
+function handleIdeaDraftChanged(idea, { pasted = false } = {}) {
+  const text = ideaDraftText(idea).trim();
+  clearTimeout(ideaAiTimers.get(idea.id));
+  const labeled = parseLabeledIdeaDraft(text);
+  if (labeled) {
+    applyIdeaStructure(idea, labeled, { local: true });
+    setIdeaAiStatus(idea, 'done', 'Mapped from your labels locally · 0 AI calls.');
+    return;
+  }
+  if (!ideaAutoStructureEnabled) {
+    setIdeaAiStatus(idea, 'idle', 'Auto is off. Use Organize now whenever you want.');
+    return;
+  }
+  if (text.length < 120 || rmsWords(text) < 20) {
+    setIdeaAiStatus(idea, 'idle', 'Keep writing — local checks use no tokens.');
+    return;
+  }
+  if (ideaAiBlocked.has(idea.id)) return;
+  const last = ideaLastOrganized.get(idea.id);
+  const hash = fastIdeaHash(text);
+  if (last?.hash === hash) {
+    setIdeaAiStatus(idea, 'done', 'This exact draft is already mapped.');
+    return;
+  }
+  if (last && last.count >= 3) {
+    setIdeaAiStatus(idea, 'idle', 'Auto paused after 3 passes. Organize manually if needed.');
+    return;
+  }
+  if (last && ideaChangedChars(text, last.text) < 100) {
+    setIdeaAiStatus(idea, 'idle', 'Small edit detected · keeping the current map to save tokens.');
+    return;
+  }
+  const waitForCooldown = last ? Math.max(0, 60000 - (Date.now() - last.at)) : 0;
+  const delay = Math.max(pasted ? 1200 : 8000, waitForCooldown);
+  setIdeaAiStatus(idea, 'idle', `Will organize once after ${Math.ceil(delay / 1000)}s of quiet.`);
+  ideaAiTimers.set(idea.id, setTimeout(() => organizeIdeaWithAi(idea, { manual: false }), delay));
+}
+
+async function organizeIdeaWithAi(idea, { manual = false } = {}) {
+  const text = ideaDraftText(idea).trim();
+  if (text.length < 80 || ideaAiInFlight.has(idea.id)) return;
+  const projectAtStart = activeProjectId;
+  const labeled = parseLabeledIdeaDraft(text);
+  if (labeled) {
+    applyIdeaStructure(idea, labeled, { local: true });
+    setIdeaAiStatus(idea, 'done', 'Mapped from your labels locally · 0 AI calls.');
+    return;
+  }
+  if (manual) ideaAiBlocked.delete(idea.id);
+  const sourceHash = fastIdeaHash(text);
+  if (!manual) {
+    const latest = ideaLastOrganized.get(idea.id);
+    if (latest?.hash === sourceHash || latest?.count >= 3 || (latest && ideaChangedChars(text, latest.text) < 100)) return;
+    if (latest && Date.now() - latest.at < 60000) {
+      const delay = 60000 - (Date.now() - latest.at);
+      setIdeaAiStatus(idea, 'idle', `Next check waits ${Math.ceil(delay / 1000)}s to save tokens.`);
+      clearTimeout(ideaAiTimers.get(idea.id));
+      ideaAiTimers.set(idea.id, setTimeout(() => organizeIdeaWithAi(idea, { manual: false }), delay));
+      return;
+    }
+  }
+  clearTimeout(ideaAiTimers.get(idea.id));
+  ideaAiInFlight.add(idea.id);
+  setIdeaAiStatus(idea, 'working', 'Organizing one compact pass…');
+  try {
+    const res = await authedFetch(`/api/ideas/${idea.id}/organize`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ draft: text, automatic: !manual }),
+    });
+    const data = await readJson(res, `/api/ideas/${idea.id}/organize`);
+    if (!res.ok) throw new Error(data.error || 'Could not organize the draft');
+    if (activeProjectId !== projectAtStart || cornerIdeas[idea.id] !== idea) return;
+    const previous = ideaLastOrganized.get(idea.id);
+    ideaLastOrganized.set(idea.id, { hash: sourceHash, text, at: Date.now(), count: (previous?.count || 0) + (data.cached ? 0 : 1) });
+    if (fastIdeaHash(ideaDraftText(idea).trim()) !== sourceHash) {
+      setIdeaAiStatus(idea, 'idle', 'Draft changed while I was mapping it · stale result ignored.');
+      return;
+    }
+    const changed = applyIdeaStructure(idea, data.script, { manual });
+    setIdeaAiStatus(idea, 'done', `${changed ? 'Draft mapped' : 'Structure already current'} · ${data.cached ? 'cached, no new call' : '1 AI call'}.`);
+  } catch (e) {
+    if (activeProjectId !== projectAtStart || cornerIdeas[idea.id] !== idea) return;
+    const noKey = /no ai api key/i.test(e.message);
+    if (!manual || noKey) ideaAiBlocked.add(idea.id);
+    setIdeaAiStatus(idea, 'error', noKey ? 'AI is not configured. Local label detection still works.' : 'Could not map this pass. Your draft is untouched.');
+    if (noKey && manual) toast('Add an AI key in Settings to auto-organize unlabelled drafts.', 'error');
+    else if (manual) toast(e.message, 'error');
+  } finally {
+    ideaAiInFlight.delete(idea.id);
+    if (activeProjectId === projectAtStart && cornerIdeas[idea.id] === idea) {
+      setIdeaAiStatus(idea, ideaAiState.get(idea.id)?.state || 'idle', ideaAiState.get(idea.id)?.text || 'Ready.');
+    }
+  }
+}
+
+function toggleIdeaAutoStructure(idea) {
+  ideaAutoStructureEnabled = !ideaAutoStructureEnabled;
+  localStorage.setItem(IDEA_AUTO_KEY, ideaAutoStructureEnabled ? 'on' : 'off');
+  const el = document.getElementById('idea-auto-toggle');
+  if (el) { el.setAttribute('aria-checked', String(ideaAutoStructureEnabled)); el.textContent = ideaAutoStructureEnabled ? 'Auto on' : 'Auto off'; }
+  if (ideaAutoStructureEnabled) { ideaAiBlocked.delete(idea.id); handleIdeaDraftChanged(idea); }
+  else { clearTimeout(ideaAiTimers.get(idea.id)); setIdeaAiStatus(idea, 'idle', 'Auto is off. Use Organize now whenever you want.'); }
+}
+
+function clearIdeaTransientState(id) {
+  clearTimeout(ideaSaveTimers.get(id)); clearTimeout(ideaAiTimers.get(id));
+  ideaSaveTimers.delete(id); ideaPendingPatches.delete(id); ideaSaveInFlight.delete(id);
+  ideaAiTimers.delete(id); ideaAiInFlight.delete(id); ideaAiBlocked.delete(id); ideaAiState.delete(id);
+  ideaLastOrganized.delete(id); ideaManualParts.delete(id); ideaAutoParts.delete(id);
 }
 
 function renderIdeaRefChips(idea) {
@@ -4179,9 +5044,10 @@ function renderIdeaRefChips(idea) {
     chip.addEventListener('click', (e) => {
       if (e.target.closest('.ref-x')) {
         idea.refs = (idea.refs || []).filter(r => r !== rid);
-        scheduleIdeaSave(idea);
+        scheduleIdeaSave(idea, { refs: idea.refs });
         renderIdeaRefChips(idea);
       } else if (job) {
+        flushIdeaSave(idea.id);
         selectItem(rid);
       }
     });
