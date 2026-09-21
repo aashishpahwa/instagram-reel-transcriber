@@ -505,6 +505,13 @@ rather than any single field, so adding a field to `parse_media_item()` and bump
 `YTDLP_COOKIES_FROM_BROWSER` config used for downloading. Without a `sessionid` cookie the
 fetch is skipped and reels simply have no view count; nothing else breaks.
 
+**Refreshing the session from the UI.** Settings → **Instagram session cookies** takes a
+Netscape cookies.txt export, a cookie-editor JSON export, a `Cookie:` header copied from
+DevTools, or just the `sessionid` value. It's saved to `data/instagram_session.txt`, takes
+effect immediately (no restart), and outranks every env-configured source until you remove
+it there. It's one session for the whole instance, not per user. A pasted session for a
+different account than `INSTAGRAM_ACCOUNT_ID` is rejected.
+
 **Use a throwaway account, and pin it.** That cookie is a bearer credential for a real
 Instagram account, and automated traffic against the private web API is what rate limiting
 and suspensions exist to catch. Reading cookies live from a browser also means the app
