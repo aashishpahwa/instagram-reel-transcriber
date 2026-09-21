@@ -1497,6 +1497,63 @@ input#compose-input:focus { border-color: var(--accent); }
   .dash-header h1 { font-size: 2.2rem; }
   .empty-state { height: auto; padding: 56px 0; }
 }
+/* ---------- My Instagram + My version ---------- */
+.me-connect { background: var(--paper-2); border: 1px solid var(--line); border-radius: var(--r); padding: 18px 20px; max-width: 760px; }
+.me-connect-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.me-connect-row input { flex: 1 1 220px; min-width: 0; }
+.me-account { margin-bottom: 12px; font-size: 0.88rem; }
+.me-handle { font-weight: 700; font-size: 1.05rem; letter-spacing: -0.01em; }
+.me-study-cta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 4px 0 18px; }
+.me-headline { margin: 0 0 16px; }
+.me-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+.me-up { color: var(--ok); }
+.me-down { color: var(--warn); }
+.me-point { background: var(--paper-2); border: 1px solid var(--line); border-left: 3px solid var(--line); border-radius: var(--r); padding: 11px 14px; margin-bottom: 8px; }
+.me-point.up { border-left-color: var(--ok); }
+.me-point.down { border-left-color: var(--warn); }
+.me-point .mp-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 0.9rem; }
+.me-point .lever { font-size: 0.72rem; color: var(--ink-3); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.me-point .sig { margin-left: auto; font-size: 0.7rem; color: var(--ink-3); }
+.me-point .mp-detail { font-size: 0.84rem; line-height: 1.55; color: var(--ink-2); margin-top: 5px; }
+.me-point .mp-reels { margin-top: 7px; display: flex; gap: 5px; flex-wrap: wrap; }
+.me-list { margin: 0 0 0 20px; font-size: 0.86rem; line-height: 1.6; }
+.me-list li { margin-bottom: 5px; }
+.me-band-row { display: grid; grid-template-columns: 64px 44px 1fr 62px 64px; gap: 8px; align-items: center; font-size: 0.8rem; padding: 4px 0; }
+.me-band-row .mb-n, .me-band-row .mb-m { color: var(--ink-3); font-size: 0.74rem; }
+.me-band-row .mb-m { text-align: right; }
+.me-band-row .mb-bar { height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.me-band-row .mb-bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.jev-note { font-size: 0.76rem; color: var(--ink-3); margin: 10px 0 0; line-height: 1.6; }
+.jev-note .jn-dis { margin-top: 2px; }
+.rw-controls textarea { width: 100%; min-height: 58px; resize: vertical; font: inherit; font-size: 0.86rem; }
+.rw-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.rw-check { font-size: 0.8rem; color: var(--ink-2); display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.rw-takeaways { font-size: 0.84rem; line-height: 1.55; margin-bottom: 12px; }
+.rw-takeaways ul { margin: 0 0 0 18px; }
+.rw-cands { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.rw-cand { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--paper-2); cursor: pointer; transition: border-color 0.18s var(--ease); }
+.rw-cand:hover { border-color: var(--ink-3); }
+.rw-cand.active { border-color: var(--accent); }
+.rw-cand .rc-score { font-size: 1.15rem; font-weight: 700; min-width: 30px; letter-spacing: -0.02em; }
+.rw-cand .rc-title { font-size: 0.84rem; font-weight: 600; line-height: 1.35; }
+.rw-cand .rc-angle { font-size: 0.74rem; color: var(--ink-3); line-height: 1.4; margin-top: 3px; }
+.jev-verdict { display: flex; gap: 18px; align-items: center; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--r); background: var(--paper-2); margin-bottom: 10px; }
+.jv-total { text-align: center; min-width: 74px; }
+.jv-total .n { font-size: 1.9rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+.jv-total .l { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); margin-top: 4px; }
+.jv-bars { flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 4px 18px; }
+.jv-row { display: grid; grid-template-columns: 112px 1fr 26px; gap: 8px; align-items: center; font-size: 0.76rem; }
+.jv-row .jv-l { color: var(--ink-2); }
+.jv-row .jv-n { text-align: right; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.jv-bar { height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.jv-bar i { display: block; height: 100%; border-radius: 99px; background: var(--ink-3); }
+.jv-bar.good i { background: var(--ok); }
+.jv-bar.mid i { background: var(--accent); }
+.jv-bar.bad i { background: var(--warn); }
+.rw-research { font-size: 0.8rem; margin-top: 8px; }
+.rw-research summary { cursor: pointer; color: var(--ink-2); }
+.rw-research ul { margin: 8px 0 8px 18px; line-height: 1.55; }
+@media (max-width: 640px) { .jev-verdict { flex-direction: column; align-items: stretch; } }
 </style>
 </head>
 <body>
@@ -1666,6 +1723,11 @@ input#compose-input:focus { border-color: var(--accent); }
           <input id="set-search-key" type="password" placeholder="">
         </div>
         <div class="field-hint" id="set-search-hint">Optional. Gives the agent a live search tool for fact-checking and research (cited by URL). On OpenAI GPT-5 models the agent already has OpenAI's hosted web search; this adds a provider of your choice on top, and is the only search on other models.</div>
+      </div>
+      <div class="field">
+        <label>Jev API key (TypeSafe)</label>
+        <input id="set-jev-key" type="password" placeholder="">
+        <div class="field-hint" id="set-jev-hint">Optional. Jev is a fast judgement model: it tags every reel against the taxonomy (consistent levers) and scores "My version" rewrites against your style. Without it everything still works on your AI model alone. Keys come from typesafe.ai.</div>
       </div>
       <div class="settings-error" id="settings-error" style="display:none"></div>
       <div class="modal-actions">
@@ -2336,7 +2398,8 @@ function renderSidebar() {
     <div class="nav-item ${activeId === 'analysis' ? 'active' : ''}" onclick="goAnalysis()"><span class="nav-icon">${icon('chart')}</span>Analysis</div>
     <div class="nav-item ${activeId === 'agent' ? 'active' : ''}" onclick="goAgent()"><span class="nav-icon">${icon('spark')}</span>Agent</div>
     <div class="nav-item ${activeId === 'script' ? 'active' : ''}" onclick="goScript()"><span class="nav-icon">${icon('star')}</span>Rate my script</div>
-    <div class="nav-item ${activeId === 'corner' ? 'active' : ''}" onclick="goCorner()"><span class="nav-icon">${icon('seed')}</span>Creative Corner</div>`;
+    <div class="nav-item ${activeId === 'corner' ? 'active' : ''}" onclick="goCorner()"><span class="nav-icon">${icon('seed')}</span>Creative Corner</div>
+    <div class="nav-item ${activeId === 'me' ? 'active' : ''}" onclick="goMe()"><span class="nav-icon">${icon('user')}</span>My Instagram</div>`;
 
   let items = Object.values(jobsById).sort((a, b) => {
     const ta = a.created_at || '9999';
@@ -2385,6 +2448,7 @@ function reelRenderKey(job) {
     cardErrorId === job.id ? (cardError || '') : '',
     analyzeErrorId === job.id ? (analyzeError || '') : '',
     visualErrorId === job.id ? (visualError || '') : '',
+    reelTab === 'rewrite' ? rewriteKeyPart(job.id) : null,
   ]);
 }
 
@@ -2410,6 +2474,10 @@ function renderMain() {
   }
   if (activeId === 'corner') {
     renderCornerPage();
+    return;
+  }
+  if (activeId === 'me') {
+    renderMePage();
     return;
   }
 
@@ -2487,6 +2555,392 @@ function renderMain() {
   bindScenePlayhead(job);
 }
 
+// ---------- My Instagram ----------
+// The user's own account: connect by handle, import their reels into a
+// dedicated project, then a study of what works / what doesn't. Account-level
+// (not per project) - the style it produces is what "My version" on any reel in
+// any project writes to. Jev tags the reels and judges rewrites; the LLM writes.
+let meData = null;            // GET /api/me payload
+let meLoading = false;
+let meBusy = '';              // '' | 'connect' | 'study' | 'import'
+let meError = null;
+let meUsernameDraft = '';
+let meImportCount = null;
+let meListSort = 'views';     // 'views' | 'newest'
+let meRenderKey = null;
+let mePollTimer = null;
+
+window.goMe = function () {
+  activeId = 'me';
+  lastReelRenderKey = null;
+  meRenderKey = null;
+  renderSidebar();
+  renderMain();
+  loadMe();
+};
+
+async function loadMe() {
+  if (meLoading) return;
+  meLoading = true;
+  try {
+    const res = await authedFetch('/api/me');
+    if (res.ok) meData = await res.json();
+  } catch (e) { /* keep what we have */ }
+  meLoading = false;
+  if (activeId === 'me') renderMePage();
+  clearTimeout(mePollTimer);
+  if (activeId === 'me' && meData?.connected && meData.progress?.in_flight > 0) mePollTimer = setTimeout(loadMe, 6000);
+}
+
+async function mePost(path, body, busy) {
+  meBusy = busy; meError = null; renderMePage();
+  try {
+    const res = await authedFetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+    meData = data;
+    return data;
+  } catch (e) {
+    meError = e.message;
+    return null;
+  } finally {
+    meBusy = '';
+    renderMePage();
+    clearTimeout(mePollTimer);
+    if (meData?.progress?.in_flight > 0) mePollTimer = setTimeout(loadMe, 6000);
+  }
+}
+
+window.meConnect = async function () {
+  const username = (meData?.connected ? meData.username : meUsernameDraft).trim();
+  if (!username) { meError = 'Enter your Instagram handle first.'; renderMePage(); return; }
+  const count = meImportCount || meData?.import_default || 30;
+  const data = await mePost('/api/me/connect', { username, import_count: count }, 'connect');
+  if (data) {
+    toast(data.queued ? `Found ${data.listing.length} reels - importing ${data.queued}.` : `Listing refreshed - ${data.listing.length} reels, nothing new to import.`);
+    loadProjects();   // the "My reels" project now exists in the switcher
+  }
+};
+
+window.meStudy = async function () {
+  const data = await mePost('/api/me/study', {}, 'study');
+  if (data) toast('Study ready.');
+};
+
+window.meImportOne = async function (shortcode) {
+  const data = await mePost('/api/me/import', { shortcodes: [shortcode] }, 'import');
+  if (data?.queued) toast('Importing that reel.');
+};
+
+window.meDisconnect = async function () {
+  if (!await askForConfirm({ title: 'Disconnect this account?', body: 'Your study and style profile are deleted. The project with your imported reels stays - delete it from the project menu if you want it gone too.', confirmText: 'Disconnect' })) return;
+  await authedFetch('/api/me', { method: 'DELETE' });
+  meData = null; meRenderKey = null;
+  loadMe();
+};
+
+window.meOpenProject = async function (reelId) {
+  if (!meData?.project_id) return;
+  if (activeProjectId !== meData.project_id) await switchProject(meData.project_id);
+  if (reelId) selectReel(reelId); else goDashboard();
+};
+
+window.meSetSort = function (s) { meListSort = s; renderMePage(); };
+
+function meReelChip(id) {
+  return `<span class="evidence-chip" onclick="meOpenProject('${escapeHtml(id)}')" title="Open this reel">${escapeHtml(String(id).split('_').slice(1).join('_') || id)}</span>`;
+}
+
+function renderMePage() {
+  if (activeId !== 'me') return;
+  lastReelRenderKey = null;
+  const d = meData;
+  const key = JSON.stringify([d ? [d.connected, d.username, d.listed_at, d.studied_at, d.progress, (d.listing || []).length, d.has_jev, d.has_ai] : null,
+    meBusy, meError, meListSort, meLoading && !d]);
+  if (key === meRenderKey && document.getElementById('me-root')) return;
+  meRenderKey = key;
+
+  const header = `
+    <div class="dash-header">
+      <div>
+        <h1>My Instagram</h1>
+        <div class="sub">Connect your account and get a read on what works on it and what doesn't - then rewrite any reel in any project in the style that works for you. Jev tags every reel and judges every rewrite; the numbers are computed from your real counts.</div>
+      </div>
+      ${d?.connected ? `<div style="display:flex;gap:8px;align-items:center"><button class="ghost" onclick="meConnect()" ${meBusy ? 'disabled' : ''}>${meBusy === 'connect' ? 'Refreshing…' : 'Refresh & import new'}</button><button class="ghost" style="color:var(--danger)" onclick="meDisconnect()">Disconnect</button></div>` : ''}
+    </div>`;
+  const err = meError ? `<div class="error-box" style="margin-bottom:14px">${escapeHtml(meError)}</div>` : '';
+  const jevNote = d && !d.has_jev ? `<div class="bulk-caveats" style="margin-bottom:14px">${icon('alert')}<span>No Jev key yet. Everything still runs on your AI model alone, but tags are less consistent and rewrites aren't scored. Add a TypeSafe (Jev) key in <a href="#" onclick="openSettings();return false">Settings</a>.</span></div>` : '';
+
+  if (!d) {
+    mainInner.innerHTML = header + `<div id="me-root"><div class="bulk-empty">Loading…</div></div>`;
+    return;
+  }
+
+  if (!d.connected) {
+    mainInner.innerHTML = header + `<div id="me-root">${err}${jevNote}
+      <div class="me-connect">
+        <div class="section-label">Your Instagram handle</div>
+        <div class="me-connect-row">
+          <input id="me-username" placeholder="@yourname" value="${escapeHtml(meUsernameDraft)}" oninput="meUsernameDraft=this.value" onkeydown="if(event.key==='Enter')meConnect()">
+          <select onchange="meImportCount=parseInt(this.value,10)" title="How many of your newest reels to download and transcribe">
+            ${[15, 30, 50, 100].filter(n => n <= d.import_max).map(n => `<option value="${n}" ${n === (meImportCount || d.import_default) ? 'selected' : ''}>newest ${n} reels</option>`).join('')}
+          </select>
+          <button class="primary" onclick="meConnect()" ${meBusy ? 'disabled' : ''}>${meBusy === 'connect' ? 'Reading your account…' : 'Connect'}</button>
+        </div>
+        <div class="field-hint">Just the handle - no password, no login. Your account needs to be public. Every reel is listed with its counts; the newest ones are downloaded and transcribed into a new project called "My reels". You can pull in older reels one by one afterwards.</div>
+      </div></div>`;
+    return;
+  }
+
+  const p = d.progress || {}, b = d.baseline || {}, c = d.creator || {};
+  const ready = p.carded >= d.study_min_reels;
+  const kp = (n, l, s = '') => `<div class="kp"><div class="n">${n ?? '—'}</div><div class="l">${l}</div>${s ? `<div class="s">${s}</div>` : ''}</div>`;
+  const account = `
+    <div class="me-account">
+      <div><span class="me-handle">@${escapeHtml(d.username)}</span>${c.follower_count != null ? `<span class="pb-meta"> · ${fmtNum(c.follower_count)} followers</span>` : ''}
+        <span class="pb-meta"> · reels live in <a href="#" onclick="meOpenProject();return false">${escapeHtml(d.project_name || 'a deleted project')}</a></span></div>
+    </div>
+    <div class="card-perf">
+      ${kp(b.n, 'reels listed', b.posts_per_week ? `${b.posts_per_week} / week` : '')}
+      ${kp(b.median_views != null ? fmtNum(b.median_views) : null, 'median views', b.p10_views != null ? `p10 ${fmtNum(b.p10_views)} · p90 ${fmtNum(b.p90_views)}` : '')}
+      ${kp(`${p.done || 0}/${p.imported || 0}`, 'imported', p.in_flight ? `${p.in_flight} processing…` : (p.errors ? `${p.errors} failed` : 'all processed'))}
+      ${kp(p.carded || 0, 'carded', `${p.jev_tagged || 0} Jev-tagged`)}
+    </div>`;
+
+  const studyCta = `
+    <div class="me-study-cta">
+      <button class="primary" onclick="meStudy()" ${meBusy || !ready || !d.has_ai ? 'disabled' : ''}>${meBusy === 'study' ? '<span class="spin" style="margin-right:6px;vertical-align:-1px"></span>Studying your reels…' : (d.report ? 'Re-run the study' : 'Study my reels')}</button>
+      <span class="pb-meta">${!d.has_ai ? 'Add an AI API key in Settings first.' : !ready ? `${p.carded || 0} of ${d.study_min_reels} reels needed are processed${p.in_flight ? ' - still importing' : ''}.` : d.studied_at ? `Last run ${relTime(d.studied_at)} over ${d.report?.n_reels ?? '?'} reels (${d.report?.n_jev_tagged ?? 0} Jev-tagged).` : `${p.carded} reels ready.`}</span>
+    </div>`;
+
+  const r = d.report;
+  const point = (it, cls) => `
+    <div class="me-point ${cls}">
+      <div class="mp-head"><b>${escapeHtml(it.pattern)}</b>${it.lever ? `<span class="lever">${escapeHtml(it.lever)}</span>` : ''}<span class="sig">${escapeHtml(it.confidence || 'low')} confidence</span></div>
+      <div class="mp-detail">${escapeHtml(it.detail || '')}</div>
+      ${(it.reels || []).length ? `<div class="mp-reels">${it.reels.map(meReelChip).join(' ')}</div>` : ''}
+    </div>`;
+  const reportHtml = r ? `
+    <div class="diag me-headline"><div class="one-line">${escapeHtml(r.headline || '')}</div></div>
+    <div class="me-cols">
+      <div><div class="bulk-section-title me-up">What works</div>${(r.what_works || []).map(x => point(x, 'up')).join('')}</div>
+      <div><div class="bulk-section-title me-down">What doesn't</div>${(r.what_doesnt || []).map(x => point(x, 'down')).join('') || '<div class="bulk-empty">Nothing clearly under-performs yet.</div>'}</div>
+    </div>
+    ${(r.next_moves || []).length ? `<div class="bulk-section-title" style="margin-top:22px">Next five reels</div><ol class="me-list">${r.next_moves.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ol>` : ''}
+    ${(r.untested || []).length ? `<div class="bulk-section-title" style="margin-top:18px">Barely tried on this account</div><ul class="me-list">${r.untested.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>` : ''}
+    ${(r.context_outliers || []).length ? `<div class="bulk-section-title" style="margin-top:18px">Outliers explained by context</div><ul class="me-list">${r.context_outliers.map(o => `<li>${meReelChip(o.reel)} ${escapeHtml(o.why)}</li>`).join('')}</ul>` : ''}
+    ${(r.levers || []).length ? `
+      <div class="bulk-section-title" style="margin-top:22px">Your levers — median views vs your own median</div>
+      <div class="bulk-table-wrap"><table class="bulk-table lever-table">
+        <thead><tr><th>Lever</th><th>n</th><th>Views lift</th><th>Sends lift</th><th>Examples</th></tr></thead>
+        <tbody>${r.levers.filter(e => e.n >= 2).slice(0, 30).map(e => `<tr>
+          <td><div class="lv-dim">${escapeHtml(e.dimension_label || e.dimension)}</div><div class="lv-val" title="${escapeHtml(e.meaning || '')}">${escapeHtml(prettyTag(e.value))}</div></td>
+          <td>${e.n}<div class="lv-sub">${escapeHtml(e.confidence || '')}</div></td>
+          <td>${liftBadge(e.lift)}<div class="lv-sub">${e.median_views != null ? fmtNum(e.median_views) + ' views' : ''}</div></td>
+          <td>${liftBadge(e.lift_sends)}</td>
+          <td>${(e.examples || []).map(meReelChip).join(' ')}</td></tr>`).join('')}</tbody>
+      </table></div>` : ''}` : '';
+
+  const s = d.style;
+  const styleHtml = s && s.voice_summary ? `
+    <div class="bulk-section-title" style="margin-top:26px">Your style profile <span class="pb-meta" style="text-transform:none;letter-spacing:0">— what "My version" on a reel writes to, and what Jev judges against</span></div>
+    <div class="script-card">
+      <div class="sc-row" style="border-top:0"><div class="sc-l">Voice</div><div class="sc-v">${escapeHtml(s.voice_summary)}</div></div>
+      ${(s.signature_moves || []).length ? `<div class="sc-row"><div class="sc-l">Signature moves</div><div class="sc-v"><ul>${s.signature_moves.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul></div></div>` : ''}
+      ${s.hook_habits ? `<div class="sc-row"><div class="sc-l">Hooks</div><div class="sc-v">${escapeHtml(s.hook_habits)}</div></div>` : ''}
+      ${s.structure_habits ? `<div class="sc-row"><div class="sc-l">Structure</div><div class="sc-v">${escapeHtml(s.structure_habits)}</div></div>` : ''}
+      ${s.cta_habits ? `<div class="sc-row"><div class="sc-l">CTA</div><div class="sc-v">${escapeHtml(s.cta_habits)}</div></div>` : ''}
+      ${s.pacing ? `<div class="sc-row"><div class="sc-l">Pacing</div><div class="sc-v">${escapeHtml(s.pacing)}</div></div>` : ''}
+      ${(s.vocabulary || []).length ? `<div class="sc-row"><div class="sc-l">Says</div><div class="sc-v chip-flow">${s.vocabulary.map(x => `<span class="chip on">${escapeHtml(x)}</span>`).join('')}</div></div>` : ''}
+      ${(s.avoid || []).length ? `<div class="sc-row"><div class="sc-l">Never says</div><div class="sc-v chip-flow">${s.avoid.map(x => `<span class="chip">${escapeHtml(x)}</span>`).join('')}</div></div>` : ''}
+      ${Object.keys(s.winning || {}).length ? `<div class="sc-row"><div class="sc-l">Winning shapes</div><div class="sc-v chip-flow">${Object.entries(s.winning).flatMap(([k, vs]) => vs.map(v => `<span class="chip tag on" title="${escapeHtml(k)}">${escapeHtml(prettyTag(v))}</span>`)).join('')}</div></div>` : ''}
+      ${Object.keys(s.losing || {}).length ? `<div class="sc-row"><div class="sc-l">Losing shapes</div><div class="sc-v chip-flow">${Object.entries(s.losing).flatMap(([k, vs]) => vs.map(v => `<span class="chip tag other" title="${escapeHtml(k)}">${escapeHtml(prettyTag(v))}</span>`)).join('')}</div></div>` : ''}
+      ${(s.example_lines || []).length ? `<div class="sc-row"><div class="sc-l">Sounds like</div><div class="sc-v">${s.example_lines.map(x => `<div class="ov-quote">“${escapeHtml(x)}”</div>`).join('')}</div></div>` : ''}
+    </div>` : '';
+
+  const bandTable = (title, rows) => (rows || []).length ? `
+    <div class="me-band"><div class="section-label">${title}</div>
+      ${rows.map(x => `<div class="me-band-row"><span class="mb-v">${escapeHtml(String(x.value))}</span><span class="mb-n">n=${x.n}</span><span class="mb-bar"><i style="width:${Math.max(4, Math.min(100, (x.lift || 0) * 50))}%"></i></span><span class="mb-l">${liftBadge(x.lift)}</span><span class="mb-m">${fmtNum(x.median_views)}</span></div>`).join('')}
+    </div>` : '';
+  const bandsHtml = b.n_with_views ? `
+    <div class="bulk-section-title" style="margin-top:26px">Across your whole account <span class="pb-meta" style="text-transform:none;letter-spacing:0">— all ${b.n_with_views} listed reels, no transcript needed</span></div>
+    <div class="me-cols">${bandTable('By length', b.by_duration)}${bandTable('By weekday posted (UTC)', b.by_weekday)}</div>` : '';
+
+  const listing = (d.listing || []).slice().sort((x, y) => meListSort === 'views' ? (y.view_count ?? -1) - (x.view_count ?? -1) : (y.posted_at || 0) - (x.posted_at || 0));
+  const statusCell = e => {
+    const im = e.imported;
+    if (!im) return `<button class="link-btn" onclick="meImportOne('${escapeHtml(e.shortcode)}')" ${meBusy ? 'disabled' : ''}>Import</button>`;
+    if (im.status === 'error') return `<span class="danger-text" title="${escapeHtml(im.error || '')}">failed</span>`;
+    if (im.status !== 'done') return `<span class="pb-meta"><span class="spin" style="vertical-align:-1px;margin-right:4px"></span>${escapeHtml(im.status)}</span>`;
+    return `<span class="evidence-chip" onclick="meOpenProject('${escapeHtml(im.id)}')">${im.carded ? (im.jev ? 'carded · Jev' : 'carded') : 'transcribed'}</span>`;
+  };
+  const listHtml = listing.length ? `
+    <div class="bulk-section-title" style="margin-top:26px;display:flex;gap:12px;align-items:baseline">All your reels
+      <span class="lever-sort" style="text-transform:none;letter-spacing:0">Sort by <button class="link-btn ${meListSort === 'views' ? 'active' : ''}" onclick="meSetSort('views')">views</button> · <button class="link-btn ${meListSort === 'newest' ? 'active' : ''}" onclick="meSetSort('newest')">newest</button></span></div>
+    <div class="bulk-table-wrap" style="max-height:460px;overflow:auto"><table class="bulk-table">
+      <thead><tr><th>Reel</th><th>Views</th><th>× median</th><th>Likes</th><th>Sends</th><th>Length</th><th>Posted</th><th></th></tr></thead>
+      <tbody>${listing.map(e => `<tr>
+        <td style="max-width:340px"><a href="${escapeHtml(e.url)}" target="_blank">${escapeHtml((e.caption || e.shortcode).slice(0, 70))}</a></td>
+        <td>${e.view_count != null ? fmtNum(e.view_count) : '—'}</td>
+        <td>${e.view_count != null && b.median_views ? liftBadge(Math.round(e.view_count / b.median_views * 100) / 100) : '—'}</td>
+        <td>${e.like_count != null ? fmtNum(e.like_count) : '—'}</td>
+        <td>${e.reshare_count != null ? fmtNum(e.reshare_count) : '—'}</td>
+        <td>${e.duration_sec != null ? Math.round(e.duration_sec) + 's' : '—'}</td>
+        <td>${e.posted_at ? new Date(e.posted_at * 1000).toLocaleDateString() : '—'}</td>
+        <td>${statusCell(e)}</td></tr>`).join('')}</tbody>
+    </table></div>` : '';
+
+  mainInner.innerHTML = header + `<div id="me-root">${err}${jevNote}${account}${studyCta}${reportHtml}${styleHtml}${bandsHtml}${listHtml}</div>`;
+}
+
+// ---------- "My version": rewrite a reel in the user's own style ----------
+const rewritesByReel = {};     // reel id -> { loaded, list, hasStyle, username }
+const rewriting = new Set();
+const rewriteErrors = {};      // reel id -> message
+const rewriteNotes = {};       // reel id -> textarea draft (never triggers a re-render)
+const rewritePick = {};        // reel id -> index of the candidate on show
+let rewriteResearch = true;
+
+function rewriteKeyPart(id) {
+  const st = rewritesByReel[id];
+  return [rewriting.has(id), rewriteErrors[id] || '', st ? [st.loaded, st.hasStyle, (st.list || []).length, st.list?.[0]?.id ?? null] : null, rewritePick[id] ?? 0, rewriteResearch];
+}
+
+async function loadRewrites(id) {
+  if (rewritesByReel[id]) return;
+  rewritesByReel[id] = { loaded: false, list: [], hasStyle: false, username: null };
+  try {
+    const res = await authedFetch(`/api/reels/${encodeURIComponent(id)}/rewrites`);
+    const data = res.ok ? await res.json() : {};
+    rewritesByReel[id] = { loaded: true, list: data.rewrites || [], hasStyle: !!data.has_style, username: data.style_username || null };
+  } catch (e) {
+    rewritesByReel[id] = { loaded: true, list: [], hasStyle: false, username: null };
+  }
+  if (activeId === id) renderMain();
+}
+
+window.openMyVersion = function (id) {
+  reelTab = 'rewrite';
+  renderMain();
+};
+
+window.runRewrite = async function (id) {
+  if (rewriting.has(id)) return;
+  rewriting.add(id); delete rewriteErrors[id];
+  renderMain();
+  try {
+    const res = await authedFetch(`/api/reels/${encodeURIComponent(id)}/rewrite`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: rewriteNotes[id] || '', research: rewriteResearch }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Rewrite failed.');
+    const st = rewritesByReel[id] || (rewritesByReel[id] = { loaded: true, list: [], hasStyle: true, username: data.style_username });
+    st.list = [data, ...(st.list || [])].slice(0, 5);
+    st.hasStyle = true;
+    rewritePick[id] = 0;
+  } catch (e) {
+    rewriteErrors[id] = e.message;
+  } finally {
+    rewriting.delete(id);
+    if (activeId === id) renderMain();
+  }
+};
+
+window.pickRewrite = function (id, i) { rewritePick[id] = i; renderMain(); };
+window.setRewriteResearch = function (on) { rewriteResearch = !!on; };
+
+window.saveRewriteDraft = async function (id, i) {
+  const cand = rewritesByReel[id]?.list?.[0]?.candidates?.[i];
+  if (!cand) return;
+  try {
+    const res = await authedFetch('/api/agent/drafts', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: cand.title, script: { ...cand.script, why: cand.why } }) });
+    if (!res.ok) throw new Error();
+    toast('Saved to drafts (Agent page).');
+  } catch (e) { toast('Could not save the draft.', 'error'); }
+};
+
+window.copyRewrite = function (id, i) {
+  const cand = rewritesByReel[id]?.list?.[0]?.candidates?.[i];
+  if (cand) navigator.clipboard.writeText(cand.script_text || '').then(() => toast('Copied.'), () => toast('Could not copy.', 'error'));
+};
+
+function verdictHtml(v, judgedBy) {
+  if (!v) return `<div class="pb-meta" style="margin:8px 0">Not scored - no Jev key configured (Settings).</div>`;
+  const bar = (label, val, title, invert = false) => {
+    const pct = Math.round(val * 100);
+    const cls = invert ? (val > 0.5 ? 'bad' : val > 0.25 ? 'mid' : 'good') : (val >= 0.7 ? 'good' : val >= 0.45 ? 'mid' : 'bad');
+    return `<div class="jv-row" title="${escapeHtml(title)}"><span class="jv-l">${label}</span><span class="jv-bar ${cls}"><i style="width:${pct}%"></i></span><span class="jv-n">${pct}</span></div>`;
+  };
+  return `
+    <div class="jev-verdict">
+      <div class="jv-total"><div class="n">${v.total}</div><div class="l">Jev score</div></div>
+      <div class="jv-bars">
+        ${bar('Sounds like you', v.voice_match, 'How closely the script matches your style profile')}
+        ${bar('Hook', v.hook_strength, 'How likely the first two lines stop a scroll')}
+        ${bar('Clarity', v.clarity, 'One idea, followable on one viewing')}
+        ${bar('Specificity', v.specificity, 'Concrete names, numbers, details')}
+        ${bar('Winning shapes', v.lever_fit, 'Hook / structure / CTA land on shapes that out-perform on your account')}
+        ${bar('Generic AI tone', v.generic_ai_tone, 'Probability it reads like AI marketing copy - lower is better', true)}
+        ${bar('Padding', v.padding, 'Probability it has lines that could be cut - lower is better', true)}
+      </div>
+    </div>
+    <div class="pb-meta" style="margin:-4px 0 10px">Judged by ${escapeHtml(judgedBy || v.model || 'Jev')} as: ${Object.entries(v.levers || {}).map(([k, x]) => `${escapeHtml(k.split('.')[0])} = ${escapeHtml(prettyTag(x))}`).join(' · ')}</div>`;
+}
+
+function renderRewriteTab(job) {
+  const id = job.id;
+  loadRewrites(id);
+  const st = rewritesByReel[id];
+  if (!st || !st.loaded) return `<div class="tab-empty">Loading…</div>`;
+  const busy = rewriting.has(id);
+  const err = rewriteErrors[id] ? `<div class="error-box" style="margin-bottom:12px">${escapeHtml(rewriteErrors[id])}</div>` : '';
+
+  if (!st.hasStyle) {
+    return `${err}<div class="tab-empty">There's no style profile to write to yet.<br>Connect your Instagram account and run the study - it works out how you talk in your best reels and which hook, structure and CTA shapes out-perform on your account. Rewrites are written to that, and Jev scores each one against it.<br><button class="primary" onclick="goMe()">Open My Instagram</button></div>`;
+  }
+
+  const controls = `
+    <div class="rw-controls">
+      <textarea placeholder="Optional note for this rewrite - e.g. 'make it about Claude instead', 'I have a demo of this', 'no CTA'" oninput="rewriteNotes['${id}']=this.value">${escapeHtml(rewriteNotes[id] || '')}</textarea>
+      <div class="rw-actions">
+        <button class="primary" onclick="runRewrite('${id}')" ${busy ? 'disabled' : ''}>${busy ? '<span class="spin" style="margin-right:6px;vertical-align:-1px"></span>Researching, drafting, judging…' : (st.list.length ? 'Write new versions' : 'Rewrite in my style')}</button>
+        <label class="rw-check"><input type="checkbox" ${rewriteResearch ? 'checked' : ''} onchange="setRewriteResearch(this.checked)"> research the topic first</label>
+        <span class="pb-meta">in the style of @${escapeHtml(st.username || 'you')}</span>
+      </div>
+    </div>`;
+
+  const latest = st.list[0];
+  if (!latest) {
+    return `${err}<div class="tab-empty" style="margin-bottom:12px">Takes this reel's idea and writes your version: researches the topic, drafts three scripts with different hooks in your voice, then Jev scores each one for how much it sounds like you and whether it uses the shapes that win on your account.</div>${controls}`;
+  }
+
+  const cands = latest.candidates || [];
+  const pick = Math.min(rewritePick[id] ?? 0, cands.length - 1);
+  const cand = cands[pick];
+  const tabs = cands.map((c, i) => `<div class="rw-cand ${i === pick ? 'active' : ''}" onclick="pickRewrite('${id}', ${i})">
+      <div class="rc-score">${c.verdict ? c.verdict.total : '–'}</div>
+      <div><div class="rc-title">${i === 0 && c.verdict ? '<span class="own-badge">best</span> ' : ''}${escapeHtml(c.title)}</div><div class="rc-angle">${escapeHtml(c.angle || '')}</div></div>
+    </div>`).join('');
+  const research = latest.research || {};
+  const researchHtml = (research.results || []).length
+    ? `<details class="rw-research"><summary>Research used - ${research.results.length} sources</summary>
+        ${(latest.facts_used || []).length ? `<ul>${latest.facts_used.map(f => `<li>${escapeHtml(f.claim)} <a href="${escapeHtml(f.url)}" target="_blank" rel="noopener">source</a></li>`).join('')}</ul>` : ''}
+        <div class="pb-meta">${research.results.map(x => `<a href="${escapeHtml(x.url)}" target="_blank" rel="noopener">${escapeHtml(x.title || x.url)}</a>`).join(' · ')}</div></details>`
+    : `<div class="pb-meta" style="margin-top:8px">No research this time${research.skipped ? ` (${escapeHtml(String(research.skipped).slice(0, 120))})` : ''} - the scripts only use facts from the source reel.</div>`;
+
+  return `${err}
+    ${(latest.source_takeaways || []).length ? `<div class="rw-takeaways"><div class="section-label">Kept from the source</div><ul>${latest.source_takeaways.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul></div>` : ''}
+    <div class="rw-cands">${tabs}</div>
+    ${cand ? `${verdictHtml(cand.verdict, latest.judged_by)}
+      ${renderScriptCard({ title: cand.title, script: { ...cand.script, why: cand.why }, created_at: latest.generated_at }).replace(/<button class="link-btn danger-text"[^>]*>Delete<\/button>/, '')}
+      <div class="toolbar" style="margin:0 0 14px"><button class="ghost" onclick="copyRewrite('${id}', ${pick})">Copy read-aloud script</button><button class="ghost" onclick="saveRewriteDraft('${id}', ${pick})">Save as draft</button></div>` : ''}
+    ${researchHtml}
+    <div class="section-label" style="margin-top:18px">Go again</div>
+    ${controls}`;
+}
+
 // ---------- reel detail tabs ----------
 // Overview / Transcript / Breakdown come from the transcript alone; Scenes,
 // Frames and Structure come from the storyboard + the vision pass over it.
@@ -2498,6 +2952,7 @@ const REEL_TABS = [
   { key: 'scenes', label: 'Scenes' },
   { key: 'frames', label: 'Frames' },
   { key: 'structure', label: 'Structure' },
+  { key: 'rewrite', label: 'My version' },
 ];
 
 window.setReelTab = function (key) {
@@ -2519,6 +2974,7 @@ function renderReelTabs(job) {
     scenes: renderScenesTab,
     frames: renderFramesTab,
     structure: renderStructureTab,
+    rewrite: renderRewriteTab,
   }[reelTab](job);
 
   const errorBox = visualError && visualErrorId === job.id
@@ -2534,6 +2990,7 @@ function renderReelTabs(job) {
         ? `<button class="ghost" disabled><span class="spin" style="margin-right:6px;vertical-align:-1px"></span>${escapeHtml(stageLabel(job))}…</button>`
         : `<button class="ghost" id="ai-breakdown-btn" onclick="runAnalysis('${job.id}')" ${analyzing.has(job.id) ? 'disabled' : ''}>${analyzing.has(job.id) ? 'Analyzing…' : (job.analysis ? 'Regenerate AI breakdown' : 'AI breakdown')}</button>
            ${visualButton(job)}`}
+      ${reelTab !== 'rewrite' ? `<button class="ghost" onclick="openMyVersion('${job.id}')" title="Research the topic and write this reel in your own style, scored by Jev">Rewrite in my style</button>` : ''}
       <button class="ghost" onclick="window.open('${job.url}', '_blank')">Open on Instagram</button>
       <button class="ghost" style="color:var(--danger)" onclick="deleteSingleReel('${job.id}')">Delete reel</button>
     </div>`;
@@ -2824,6 +3281,16 @@ function renderCardTab(job) {
   const empty = !t && !d ? `<div class="tab-empty">${job.analysis ? 'Tags this reel against the shared taxonomy (hook type, structure, CTA, format…) and diagnoses its numbers. Runs automatically after the breakdown.' : 'Needs the AI breakdown first — it runs automatically once the transcript is in.'}<br><div style="margin-top:10px">${runBtn}</div></div>` : '';
 
   const insightsHtml = job.source === 'own' ? renderInsightsForm(job) : '';
+
+  // Where the tags came from: Jev re-judges the closed dimensions; anything it
+  // wasn't sure of stays the LLM's, and the places they disagreed are listed.
+  if (t && t.jev) {
+    const conf = Object.entries(t.jev.confidence || {}).filter(([k]) => !k.startsWith('scores.'));
+    const unsure = conf.filter(([, v]) => v < 0.5).map(([k]) => k);
+    const dis = Object.entries(t.jev.disagreements || {});
+    const med = conf.length ? Math.round(conf.map(([, v]) => v).sort((a, b) => a - b)[Math.floor(conf.length / 2)] * 100) : null;
+    tagsHtml += `<div class="jev-note"><span class="own-badge">Jev</span> tags judged by ${escapeHtml(t.jev.model || 'Jev')}${med != null ? ` · median confidence ${med}%` : ''}${unsure.length ? ` · unsure on ${unsure.map(k => escapeHtml(k)).join(', ')} (kept the model's tag)` : ''}${dis.length ? `<div class="jn-dis">Overrode the model on ${dis.map(([k, v]) => `${escapeHtml(k)}: <s>${escapeHtml(prettyTag(v.llm))}</s> → ${escapeHtml(prettyTag(v.jev))}`).join(' · ')}</div>` : ''}</div>`;
+  }
 
   return `${err}${perf}${tagsHtml}${diagHtml}${empty}${t || d ? `<div class="toolbar" style="margin-top:14px">${runBtn}</div>` : ''}${insightsHtml}`;
 }
@@ -6238,6 +6705,9 @@ async function loadSettings() {
   document.getElementById('set-search-provider').value = s.search_provider || '';
   document.getElementById('set-search-key').value = '';
   document.getElementById('set-search-key').placeholder = s.has_search_key ? 'Saved — leave blank to keep it' : 'API key';
+  document.getElementById('set-jev-key').value = '';
+  document.getElementById('set-jev-key').placeholder = s.has_jev_key ? 'Saved — leave blank to keep it' : 'sk-...';
+  if (s.platform_jev && !s.has_jev_key) document.getElementById('set-jev-hint').textContent = 'A platform Jev key is configured for everyone; set your own here to override it.';
   const searchHint = document.getElementById('set-search-hint');
   if (searchHint && s.platform_search_provider && !s.search_provider) searchHint.textContent = `A platform ${s.platform_search_provider} key is configured for everyone; set your own here to override it.`;
 }
@@ -6256,6 +6726,7 @@ document.getElementById('settings-save').addEventListener('click', async () => {
     groq_api_key: document.getElementById('set-groq-key').value.trim(),
     search_provider: document.getElementById('set-search-provider').value,
     search_api_key: document.getElementById('set-search-key').value.trim(),
+    jev_api_key: document.getElementById('set-jev-key').value.trim(),
   };
   const errorEl = document.getElementById('settings-error');
   try {

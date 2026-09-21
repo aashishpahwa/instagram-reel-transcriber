@@ -106,7 +106,8 @@ CREATE TABLE settings (
   groq_api_key text,  -- Groq-hosted Whisper, the cloud transcription fallback when local Whisper/GPU isn't available
   -- Agent web research: 'tavily' | 'langsearch' | 'brave' + key (blank = platform env key, else hosted search only)
   search_provider text,
-  search_api_key text
+  search_api_key text,
+  jev_api_key text  -- TypeSafe (Jev) key for the judgement layer; blank = platform TYPESAFE_API_KEY, else Jev is skipped
 );
 
 CREATE TABLE analysis_runs (
@@ -219,3 +220,35 @@ CREATE INDEX script_ratings_user_project_idx
 CREATE INDEX script_ratings_previous_idx
   ON script_ratings (previous_rating_id)
   WHERE previous_rating_id IS NOT NULL;
+
+-- My Instagram: the account a user connected as "me". User-level because the
+-- style is used from every project; its reels live in an ordinary project
+-- (project_id) so they get the normal pipeline, cards and lever table. listing
+-- holds every reel the account listing returned (imported or not) so the
+-- account baseline covers the whole account.
+CREATE TABLE creator_profiles (
+  user_id uuid PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,
+  username text NOT NULL,
+  ig_user_id text,
+  project_id bigint REFERENCES projects(id) ON DELETE SET NULL,
+  listing jsonb,
+  listed_at timestamptz,
+  report jsonb,   -- the last "what works / what doesn't" study
+  style jsonb,    -- the style profile rewrites are written to and Jev judges against
+  studied_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- "Rewrite in my style" results for a reel. Append-only: each costs a research
+-- pass, several drafts and a Jev judging round.
+CREATE TABLE reel_rewrites (
+  id bigserial PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+  project_id bigint NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  reel_id text NOT NULL,
+  result jsonb NOT NULL,
+  model text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX reel_rewrites_reel_idx ON reel_rewrites (project_id, reel_id, created_at DESC);

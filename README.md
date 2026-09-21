@@ -58,6 +58,7 @@ flowchart LR
 - **Bulk CSV export** — export all transcribed reels to CSV with checkboxes for video link, metrics, timestamped script, and AI analysis
 - **Analysis tabs** *(optional)* — a persistent, growing library of AI-generated hook/script/talking-style "formulas" (reusable pattern + rating + reasoning + evidence), built by comparing your highest- and lowest-engagement reels and accumulating/deduping across runs, backed by computed metrics like words-per-minute, filler-word density, and CTA position
 - **Rate my script** *(optional)* — paste a draft and get it scored (0-100 plus hook / promise / body / CTA / clarity / retention / voice sub-scores, each pointing at a line), edited (the fewest changes with the biggest lift, each justified), and rewritten (a full Script card in one of six angles) — all against the project's own lever stats, playbook and top reels rather than generic creator advice
+- **My Instagram + "My version"** *(optional)* — name your own account and every reel on it is listed with its counts; the newest are imported into a "My reels" project, and a study says what works on *your* account and what doesn't, with a style profile of how you talk in your best reels. Any reel in any project then has a **My version** tab: it researches the topic, drafts three scripts in your style, and [Jev](https://docs.typesafe.ai/models) scores each one for how much it sounds like you and whether it uses the shapes that win on your account
 - **Creative Corner** — a per-project writing workspace for ideas and scripts: paste a loose thought or a complete draft, then let free local label detection (and a tightly rate-limited one-call AI fallback for unlabelled drafts) map Hook / Promise / Validation / CTA beside the writing canvas. Includes a wide drag-and-drop pipeline (Ideas → Scripting → Ready to film → Posted), sequenced field-level autosave, search, tags, duration, reference reels, full-board CSV download/device sharing, and an idea-aware bottom-right copilot that makes no chat call until you press Send
 - **GPU-accelerated** — uses CUDA automatically when available for fast Whisper inference
 - **One-click launch** — a `start.bat` script for Windows users to open the app without touching a terminal
@@ -303,6 +304,28 @@ the lever table, the top reels by reach with their hook lines and tags, the crea
 and voice profile, and the algorithm brief — and the prompts ban the generic advice ("post
 consistently", "make the hook more engaging"). Results are kept per project in the browser, so a
 reload or a hop to another page doesn't lose them; nothing is stored server-side.
+
+### My Instagram, "My version", and Jev
+
+**Jev** is TypeSafe AI's System One model. It does not write: it reads one piece of state and answers typed questions about it - `choice` (one label from a closed set), `score` (a position on an ordered rubric), `noul` (a yes/no probability) - each with calibrated probabilities, in well under a second, for a fraction of a cent. That is the exact shape of this app's closed taxonomy, so the work is split three ways:
+
+| Layer | Does | Never does |
+|---|---|---|
+| **Jev** (`jev.py`) | Tags reels against the taxonomy; judges rewrite candidates against your style | Write text, count, do arithmetic, compare dates |
+| **The LLM** | Diagnoses, the account study, the rewrites themselves | Decide what "winning" means |
+| **Code** (`levers.py`, `_listing_baseline`) | Lifts, medians, bands, the 0-100 rewrite total | - |
+
+Set a key in **Settings -> Jev API key**, or platform-wide with `TYPESAFE_API_KEY`. With no key anywhere every Jev step is skipped and the app runs on the LLM alone, exactly as before. Jev is called over plain `requests` (`POST https://api.typesafe.ai/v1/systemone`), like every other provider here.
+
+**In the Reel Card.** After the LLM returns tags + diagnosis, Jev re-judges every closed dimension and the four 1-5 scores (23 questions, one call). A Jev answer replaces the LLM's only at confidence >= 0.5 and never when it picks `other` (which needs a written note); `hook.devices` is one `noul` per device, kept at p >= 0.6. What Jev can't produce (topic, the two numbers, `other_notes`) stays the LLM's. The card shows Jev's median confidence, what it was unsure of, and where it overrode the model (`tags.jev`). A Jev outage just leaves the LLM's tags.
+
+**My Instagram** (left nav). Enter your handle - no password, no login; the listing is read with the same Instagram session the app already downloads with, so the account has to be public. `POST /api/me/connect` lists up to 300 reels with their counts (`creator_profiles.listing`), creates a `My reels - @handle` project with the handle set as its own account, and queues the newest N (default 30, max 100) through the ordinary pipeline. Older reels can be imported one by one from the table. The account-wide numbers - median views, p10/p90, posts per week, views by length and by weekday - are computed over the *whole* listing, not just the imported sample.
+
+**Study my reels** (`POST /api/me/study`, needs 6 carded reels) Jev-tags any reel that hasn't been, builds the lever table against your own median, and has the LLM write what works, what doesn't, context outliers (collabs, paid partnerships), what you've barely tried, the next five reels, and a **style profile** (voice, signature moves, vocabulary, what you never say, hook / structure / CTA habits, real example lines). Reel ids the model cites are checked against the project and dropped if invented. The `winning` / `losing` shapes on the profile come from the lever table (n >= 3, lift >= 1.25 / <= 0.8), not from the model.
+
+**My version** (a tab + toolbar button on every reel, any project; `POST /api/reels/<id>/rewrite`). Takes the reel's *idea*, never its sentences. One or two live searches on the topic (your configured search provider; skipped cleanly without one - then no new factual claims are allowed), one LLM call for three candidates with different hook shapes in your style, then Jev judges each candidate in parallel: sounds-like-you, hook, clarity, specificity, whether hook/structure/CTA land on your winning shapes, and two penalties (generic AI tone, padding). The 0-100 total is a weighted sum computed in code; candidates are shown best first. A cited URL must be one the search actually returned. Results are kept in `reel_rewrites`; any candidate can be saved to the drafts list.
+
+Schema: `migrations/008_my_instagram_jev.sql`.
 
 ### The Reel agent (MCP server)
 

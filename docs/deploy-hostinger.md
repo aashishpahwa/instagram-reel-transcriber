@@ -46,6 +46,7 @@ a Groq key is required in the cloud (see step 3).
    | `INSTAGRAM_ACCOUNT_ID` | optional | Pin the app to one Instagram account's `ds_user_id`. |
    | `GOOD_VIEW_THRESHOLD`, `AMAZING_VIEW_THRESHOLD`, `REACH_*_MULTIPLE` | optional | Performance tiers; see [`.env.example`](../.env.example). |
    | `TAVILY_API_KEY` / `LANGSEARCH_API_KEY` / `BRAVE_API_KEY` | optional | Web search for the agent. |
+   | `TYPESAFE_API_KEY` | optional | Jev (TypeSafe System One) key for the judgement layer: consistent reel tags and scored "My version" rewrites. Skipped when unset. |
 
    Click *Deploy*. The first start pulls the image (~400 MB) and takes a minute.
    The compose file refuses to start without `DATABASE_URL` and
