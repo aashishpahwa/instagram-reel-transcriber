@@ -6744,9 +6744,12 @@ function renderInstagramSession(s) {
 async function loadInstagramSession() {
   try {
     const res = await authedFetch('/api/instagram-session');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     renderInstagramSession(await res.json());
   } catch (e) {
-    document.getElementById('set-ig-status').textContent = 'Could not read the Instagram session status.';
+    console.error('loadInstagramSession error:', e);
+    const statusEl = document.getElementById('set-ig-status');
+    if (statusEl) statusEl.textContent = 'Could not read the Instagram session status.';
   }
 }
 document.getElementById('set-ig-clear').addEventListener('click', async () => {
