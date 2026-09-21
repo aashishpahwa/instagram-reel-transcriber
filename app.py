@@ -146,6 +146,35 @@ if _cookies_content and not YTDLP_COOKIES_FILE:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     DEFAULT_COOKIES_FILE.write_text(_cookies_content.replace("\r\n", "\n") + "\n", encoding="utf-8")
 
+# Cookies pasted into Settings -> Instagram session. Kept in their own file so a
+# restart (which rewrites data/cookies.txt from YTDLP_COOKIES_CONTENT) can't
+# clobber them, and they outrank every env-configured source: refreshing an
+# expired session from the UI has to take effect without touching the deploy.
+# One file for the whole instance - the Instagram session is shared, not per user.
+SETTINGS_COOKIES_FILE = DATA_DIR / "instagram_session.txt"
+
+
+def active_cookiefile():
+    """The cookies.txt yt-dlp and the stats calls should read, or "" for none."""
+    if SETTINGS_COOKIES_FILE.exists():
+        return str(SETTINGS_COOKIES_FILE)
+    if YTDLP_COOKIES_FILE:
+        return YTDLP_COOKIES_FILE
+    return str(DEFAULT_COOKIES_FILE) if DEFAULT_COOKIES_FILE.exists() else ""
+
+
+def cookie_source():
+    """Where the live Instagram session comes from, for the Settings panel."""
+    if SETTINGS_COOKIES_FILE.exists():
+        return "settings"
+    if YTDLP_COOKIES_FILE:
+        return "env_file"
+    if DEFAULT_COOKIES_FILE.exists():
+        return "env_content" if _cookies_content else "data_file"
+    if YTDLP_COOKIES_FROM_BROWSER:
+        return "browser"
+    return None
+
 # Which Instagram account this app is allowed to act as, as the numeric id in the
 # `ds_user_id` cookie. Reading cookies live from a browser means the app follows
 # whoever happens to be logged in there - so if you deliberately use a throwaway
@@ -1215,7 +1244,7 @@ def _cookies_from_browser_spec(spec):
 def ydl_opts(**overrides):
     """Base yt-dlp options with Instagram cookies wired in when available."""
     opts = {"format": "mp4/best", "quiet": True, "no_warnings": True}
-    cookiefile = YTDLP_COOKIES_FILE or (str(DEFAULT_COOKIES_FILE) if DEFAULT_COOKIES_FILE.exists() else "")
+    cookiefile = active_cookiefile()
     if cookiefile:
         opts["cookiefile"] = cookiefile
     elif YTDLP_COOKIES_FROM_BROWSER:
@@ -1267,7 +1296,7 @@ def _instagram_cookies():
             return _stats_cookies["value"]
 
     jar = None
-    cookiefile = YTDLP_COOKIES_FILE or (str(DEFAULT_COOKIES_FILE) if DEFAULT_COOKIES_FILE.exists() else "")
+    cookiefile = active_cookiefile()
     try:
         from yt_dlp.cookies import YoutubeDLCookieJar, extract_cookies_from_browser
         if cookiefile:
@@ -1307,6 +1336,107 @@ def instagram_account_ok():
                        f"to {INSTAGRAM_ACCOUNT_ID}. Refusing to use the wrong account - log the "
                        "pinned account back in, or update INSTAGRAM_ACCOUNT_ID in .env.")
     return True, ""
+
+
+def reset_instagram_cookie_cache():
+    with _stats_lock:
+        _stats_cookies.update({"at": 0.0, "value": None})
+
+
+def parse_pasted_cookies(text):
+    """Whatever the user pasted, as a list of (domain, path, secure, expiry, name, value).
+
+    Accepts the four shapes people actually have to hand: a Netscape cookies.txt
+    export, a JSON array from a cookie-editor extension, a raw `Cookie:` request
+    header copied out of DevTools, or a bare sessionid value."""
+    text = (text or "").strip()
+    if not text:
+        return []
+    far_future = int(time.time()) + 365 * 86400
+
+    if text.startswith("[") or text.startswith("{"):
+        try:
+            data = json.loads(text)
+        except ValueError:
+            raise ValueError("That looks like JSON but doesn't parse.")
+        if isinstance(data, dict):
+            data = data.get("cookies") or [data]
+        out = []
+        for c in data:
+            if not isinstance(c, dict) or not c.get("name"):
+                continue
+            domain = c.get("domain") or ".instagram.com"
+            if "instagram.com" not in domain:
+                continue
+            expiry = c.get("expirationDate") or c.get("expires") or far_future
+            try:
+                expiry = int(float(expiry))
+            except (TypeError, ValueError):
+                expiry = far_future
+            out.append((domain, c.get("path") or "/", bool(c.get("secure", True)),
+                        expiry if expiry > 0 else far_future, c["name"], str(c.get("value", ""))))
+        return out
+
+    lines = [l for l in text.replace("\r\n", "\n").split("\n") if l.strip()]
+    if any("\t" in l for l in lines):
+        out = []
+        for line in lines:
+            if line.startswith("#HttpOnly_"):
+                line = line[len("#HttpOnly_"):]
+            elif line.startswith("#"):
+                continue
+            parts = line.split("\t")
+            if len(parts) < 7 or "instagram.com" not in parts[0]:
+                continue
+            try:
+                expiry = int(float(parts[4])) or far_future
+            except ValueError:
+                expiry = far_future
+            out.append((parts[0], parts[2] or "/", parts[3].upper() == "TRUE", expiry, parts[5], parts[6]))
+        return out
+
+    header = text[len("cookie:"):].strip() if text.lower().startswith("cookie:") else text
+    if "=" in header:
+        out = []
+        for pair in header.split(";"):
+            name, sep, value = pair.strip().partition("=")
+            if sep and name.strip():
+                out.append((".instagram.com", "/", True, far_future, name.strip(), value.strip()))
+        return out
+
+    # A bare value: treat it as the sessionid.
+    return [(".instagram.com", "/", True, far_future, "sessionid", header)]
+
+
+def save_pasted_cookies(text):
+    """Validate and store Settings-pasted cookies. Returns the new ds_user_id.
+    Raises ValueError with a message the UI can show."""
+    cookies = parse_pasted_cookies(text)
+    names = {c[4]: c[5] for c in cookies}
+    if not names.get("sessionid"):
+        raise ValueError("No instagram.com sessionid cookie found in what you pasted.")
+    account = names.get("ds_user_id") or ""
+    if not account:
+        # Instagram's sessionid is "<user id>%3A<token>...", so the account the
+        # session belongs to can be read off it when ds_user_id wasn't pasted.
+        candidate = requests.utils.unquote(names["sessionid"]).split(":", 1)[0]
+        if candidate.isdigit():
+            account = candidate
+            cookies.append((".instagram.com", "/", True, int(time.time()) + 365 * 86400, "ds_user_id", account))
+    if INSTAGRAM_ACCOUNT_ID and account and account != INSTAGRAM_ACCOUNT_ID:
+        raise ValueError(f"These cookies belong to Instagram account {account}, but this server is "
+                         f"pinned to {INSTAGRAM_ACCOUNT_ID} (INSTAGRAM_ACCOUNT_ID).")
+    lines = ["# Netscape HTTP Cookie File", "# Pasted in Settings -> Instagram session", ""]
+    for domain, path, secure, expiry, name, value in cookies:
+        subdomains = "TRUE" if domain.startswith(".") else "FALSE"
+        lines.append("\t".join([domain, subdomains, path, "TRUE" if secure else "FALSE",
+                                str(expiry), name, value]))
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    tmp = SETTINGS_COOKIES_FILE.with_suffix(".tmp")
+    tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    os.replace(tmp, SETTINGS_COOKIES_FILE)
+    reset_instagram_cookie_cache()
+    return account
 
 
 def fetch_reel_stats(url):
@@ -1678,11 +1808,11 @@ def describe_download_error(exc):
     """Turn yt-dlp's login-wall error into something actionable in the UI."""
     msg = str(exc)
     if "empty media response" in msg or "login required" in msg.lower() or "rate-limit reached" in msg.lower():
-        have_cookies = bool(YTDLP_COOKIES_FILE or YTDLP_COOKIES_FROM_BROWSER or DEFAULT_COOKIES_FILE.exists())
-        hint = ("The configured Instagram cookies were rejected - they have most likely expired, "
-                "so export them again." if have_cookies else
-                "Instagram requires a logged-in session for this post. Set YTDLP_COOKIES_FILE "
-                "(or YTDLP_COOKIES_FROM_BROWSER) and restart the app.")
+        have_cookies = cookie_source() is not None
+        hint = ("The configured Instagram cookies were rejected - they have most likely expired. "
+                "Paste fresh ones in Settings -> Instagram session." if have_cookies else
+                "Instagram requires a logged-in session for this post. Paste session cookies in "
+                "Settings -> Instagram session.")
         return f"Instagram login required: {hint}"
     return msg
 
@@ -2746,6 +2876,43 @@ def update_settings():
         s["jev_api_key"] = ""
     save_settings(g.user_id, s)
     return jsonify({"ok": True})
+
+
+def _instagram_session_status():
+    cookies = _instagram_cookies()
+    updated = None
+    if SETTINGS_COOKIES_FILE.exists():
+        updated = datetime.fromtimestamp(SETTINGS_COOKIES_FILE.stat().st_mtime, timezone.utc).isoformat()
+    return {"source": cookie_source(), "has_session": bool(cookies.get("sessionid")),
+            "account_id": cookies.get("ds_user_id"), "pinned_account_id": INSTAGRAM_ACCOUNT_ID or None,
+            "updated_at": updated}
+
+
+# The Instagram session is instance-wide (every account's downloads and stats
+# go through it), so these deliberately aren't scoped to g.user_id.
+@app.route("/api/instagram-session", methods=["GET"])
+@require_login
+def get_instagram_session():
+    return jsonify(_instagram_session_status())
+
+
+@app.route("/api/instagram-session", methods=["POST"])
+@require_login
+def set_instagram_session():
+    data = request.get_json(force=True) or {}
+    try:
+        save_pasted_cookies(data.get("cookies") or "")
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify({"ok": True, **_instagram_session_status()})
+
+
+@app.route("/api/instagram-session", methods=["DELETE"])
+@require_login
+def clear_instagram_session():
+    SETTINGS_COOKIES_FILE.unlink(missing_ok=True)
+    reset_instagram_cookie_cache()
+    return jsonify({"ok": True, **_instagram_session_status()})
 
 
 def job_for_request(rid):
@@ -5320,7 +5487,7 @@ def fetch_account_reels(ig_user_id, username, limit=MY_LISTING_MAX):
     cookies = _instagram_cookies()
     if "sessionid" not in cookies:
         raise MyAccountError("No Instagram session is configured on this server, so an account's reels can't be "
-                             "listed. Set YTDLP_COOKIES_FILE / YTDLP_COOKIES_FROM_BROWSER and restart.")
+                             "listed. Paste session cookies in Settings -> Instagram session.")
     headers = {
         "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                        "(KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"),
@@ -5342,7 +5509,8 @@ def fetch_account_reels(ig_user_id, username, limit=MY_LISTING_MAX):
         except Exception as exc:
             raise MyAccountError(f"Instagram didn't answer: {exc}")
         if resp.status_code in (401, 403):
-            raise MyAccountError("Instagram rejected the session - the configured cookies have most likely expired.")
+            raise MyAccountError("Instagram rejected the session - the configured cookies have most likely expired. "
+                                 "Paste fresh ones in Settings -> Instagram session.")
         if resp.status_code != 200:
             if entries:
                 break   # keep what we have; a late page failing shouldn't lose the listing
@@ -5352,7 +5520,8 @@ def fetch_account_reels(ig_user_id, username, limit=MY_LISTING_MAX):
         except ValueError:
             if entries:
                 break
-            raise MyAccountError("Instagram answered with a login page - the session cookies need refreshing.")
+            raise MyAccountError("Instagram answered with a login page - the session cookies need refreshing. "
+                                 "Paste fresh ones in Settings -> Instagram session.")
         items = payload.get("items") or []
         for wrapper in items:
             media = wrapper.get("media") if isinstance(wrapper, dict) else None

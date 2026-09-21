@@ -1729,6 +1729,13 @@ input#compose-input:focus { border-color: var(--accent); }
         <input id="set-jev-key" type="password" placeholder="">
         <div class="field-hint" id="set-jev-hint">Optional. Jev is a fast judgement model: it tags every reel against the taxonomy (consistent levers) and scores "My version" rewrites against your style. Without it everything still works on your AI model alone. Keys come from typesafe.ai.</div>
       </div>
+      <div class="field">
+        <label>Instagram session cookies</label>
+        <div class="field-hint" id="set-ig-status" style="margin: 0 0 6px">Checking…</div>
+        <textarea id="set-ig-cookies" rows="3" spellcheck="false" autocomplete="off" style="font-family: ui-monospace, monospace; font-size: 0.75rem" placeholder="Paste a cookies.txt export, a cookie-editor JSON export, a Cookie: header, or just the sessionid value"></textarea>
+        <div class="field-hint">Needed for login-gated reels, view counts and My Instagram. Log in to instagram.com, then copy the cookies from DevTools → Application → Cookies (at minimum <code>sessionid</code>; include <code>csrftoken</code> and <code>ds_user_id</code> too). Shared by everyone on this server, and it overrides any cookies set in the server's environment. Leave blank to keep the current session.</div>
+        <button class="ghost destructive" id="set-ig-clear" type="button" style="display:none; margin-top: 8px">Remove pasted cookies</button>
+      </div>
       <div class="settings-error" id="settings-error" style="display:none"></div>
       <div class="modal-actions">
         <button class="ghost" id="settings-cancel">Cancel</button>
@@ -6710,7 +6717,42 @@ async function loadSettings() {
   if (s.platform_jev && !s.has_jev_key) document.getElementById('set-jev-hint').textContent = 'A platform Jev key is configured for everyone; set your own here to override it.';
   const searchHint = document.getElementById('set-search-hint');
   if (searchHint && s.platform_search_provider && !s.search_provider) searchHint.textContent = `A platform ${s.platform_search_provider} key is configured for everyone; set your own here to override it.`;
+  document.getElementById('set-ig-cookies').value = '';
+  loadInstagramSession();
 }
+
+const igSourceLabels = {
+  settings: 'pasted in Settings',
+  env_file: 'YTDLP_COOKIES_FILE',
+  env_content: 'YTDLP_COOKIES_CONTENT',
+  data_file: 'data/cookies.txt',
+  browser: 'read from the server\'s browser',
+};
+function renderInstagramSession(s) {
+  const statusEl = document.getElementById('set-ig-status');
+  if (!s.source) {
+    statusEl.textContent = 'No Instagram session configured.';
+  } else {
+    const who = s.account_id ? `account ${s.account_id}` : 'unknown account';
+    const when = s.updated_at ? `, updated ${new Date(s.updated_at).toLocaleString()}` : '';
+    statusEl.textContent = s.has_session
+      ? `Active: ${who} (${igSourceLabels[s.source] || s.source}${when}).`
+      : `Cookies found (${igSourceLabels[s.source] || s.source}) but there's no sessionid in them.`;
+  }
+  document.getElementById('set-ig-clear').style.display = s.source === 'settings' ? '' : 'none';
+}
+async function loadInstagramSession() {
+  try {
+    const res = await authedFetch('/api/instagram-session');
+    renderInstagramSession(await res.json());
+  } catch (e) {
+    document.getElementById('set-ig-status').textContent = 'Could not read the Instagram session status.';
+  }
+}
+document.getElementById('set-ig-clear').addEventListener('click', async () => {
+  const res = await authedFetch('/api/instagram-session', { method: 'DELETE' });
+  if (res.ok) renderInstagramSession(await res.json());
+});
 
 document.getElementById('settings-btn').addEventListener('click', openSettings);
 document.getElementById('settings-cancel').addEventListener('click', closeSettings);
@@ -6730,6 +6772,16 @@ document.getElementById('settings-save').addEventListener('click', async () => {
   };
   const errorEl = document.getElementById('settings-error');
   try {
+    const igCookies = document.getElementById('set-ig-cookies').value.trim();
+    if (igCookies) {
+      const igRes = await authedFetch('/api/instagram-session', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cookies: igCookies }),
+      });
+      const igData = await igRes.json().catch(() => ({}));
+      if (!igRes.ok) throw new Error(igData.error || 'Saving the Instagram cookies failed');
+      document.getElementById('set-ig-cookies').value = '';
+      renderInstagramSession(igData);
+    }
     const res = await authedFetch('/api/settings', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     });
